@@ -77,13 +77,4 @@
 
 ---
 
-## 🧑‍💼 Authors & Acknowledgments
-
-**Prepared by**: Aabhas Agarwal
-**Date**: April 2025  
-**Version**: 1.0  
-**Approved by**: *[To be filled by stakeholder]*
-
----
-
 > 💚 *HaritPal is built to promote eco-consciousness and make plant care intuitive and enjoyable for everyone.*
