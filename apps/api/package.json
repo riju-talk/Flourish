@@ -1,5 +1,5 @@
 {
-  "name": "api",
+  "name": "api-hartipal-smart-garden-guide",
   "version": "1.0.0",
   "scripts": {
     "dev": "python manage.py runserver 0.0.0.0:8000"
