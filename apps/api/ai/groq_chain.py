@@ -1,7 +1,6 @@
 import os
 from typing import Dict, List, Optional
 from langchain_groq import ChatGroq
-from langchain.schema import HumanMessage, SystemMessage
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import (
@@ -15,7 +14,7 @@ from django.conf import settings
 # Initialize the Groq chat model
 chat = ChatGroq(
     temperature=0.7,
-    model_name="mixtral-8x7b-32768",
+    model_name="meta-llama/llama-4-scout-17b-16e-instruct",
     api_key=os.getenv("GROQ_API_KEY")
 )
 
@@ -144,7 +143,7 @@ def generate_follow_up_suggestions(question: str, response: str) -> List[str]:
         suggestions.extend([
             'What kind of light does this plant need?',
             'Can it tolerate direct sunlight?',
-            'How do I know if it's getting too much light?'
+            'How do I know if it\'s getting too much light?'
         ])
     
     if not suggestions:

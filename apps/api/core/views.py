@@ -1,4 +1,3 @@
-import json
 import jwt
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -28,7 +27,6 @@ from .serializers import (
     PlantCareLogSerializer,
     AIChatSessionSerializer,
     AIChatMessageSerializer,
-    UserSerializer,
 )
 
 User = get_user_model()
@@ -133,157 +131,75 @@ class SupabaseAuthView(APIView):
             return Response(
                 {'error': str(e)}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-class RefreshTokenView(APIView):
-    """
-    View to refresh access token using refresh token from httpOnly cookie
-    """
-    permission_classes = [AllowAny]
-    
-    def post(self, request):
-        refresh_token = request.COOKIES.get('refresh_token')
-        
-        if not refresh_token:
-            return Response(
-                {'error': 'No refresh token provided'}, 
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-            
-        try:
-            refresh = RefreshToken(refresh_token)
-            access_token = str(refresh.access_token)
-            
-            response = Response({
-                'access': access_token
-            })
-            
-            # Set new access token in httpOnly cookie
-            response.set_cookie(
-                key='access_token',
-                value=access_token,
-                httponly=True,
-                secure=not settings.DEBUG,
-                samesite='Lax',
-                max_age=60 * 60  # 1 hour
-            )
-            
-            return response
-            
-        except Exception as e:
-            return Response(
-                {'error': str(e)}, 
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-
-class LogoutView(APIView):
-    """
-    View to handle user logout by blacklisting refresh token
-    """
-    def post(self, request):
-        try:
-            refresh_token = request.COOKIES.get('refresh_token')
-            if refresh_token:
-                token = RefreshToken(refresh_token)
-                token.blacklist()
-            
-            response = Response({
-                'message': 'Successfully logged out'
-            })
-            
-            # Clear auth cookies
-            response.delete_cookie('access_token')
-            response.delete_cookie('refresh_token')
-            response.delete_cookie('csrftoken')
-            
-            return response
-            
-        except Exception as e:
-            return Response(
-                {'error': str(e)}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            )            
 
 class ProfileViewSet(viewsets.ModelViewSet):
     """API endpoint for user profiles"""
+    queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
-    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return Profile.objects.filter(user=self.request.user)
+        return Profile.objects.all()
     
     def get_object(self):
-        # Users can only access their own profile
-        return self.request.user.profile
+        return super().get_queryset().first()
     
     def perform_update(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save()
 
 class PlantViewSet(viewsets.ModelViewSet):
     """API endpoint for plants"""
+    queryset = Plant.objects.all()
     serializer_class = PlantSerializer
-    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return Plant.objects.filter(user=self.request.user)
+        return Plant.objects.all()
     
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save()
 
 class CareTaskViewSet(viewsets.ModelViewSet):
     """API endpoint for care tasks"""
+    queryset = CareTask.objects.all()
     serializer_class = CareTaskSerializer
-    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return CareTask.objects.filter(plant__user=self.request.user)
+        return CareTask.objects.all()
     
     def perform_create(self, serializer):
-        # Verify the plant belongs to the user
-        plant = serializer.validated_data.get('plant')
-        if plant.user != self.request.user:
-            raise PermissionDenied("You don't have permission to add tasks to this plant.")
         serializer.save()
 
 class PlantCareLogViewSet(viewsets.ModelViewSet):
     """API endpoint for plant care logs"""
+    queryset = PlantCareLog.objects.all()
     serializer_class = PlantCareLogSerializer
-    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return PlantCareLog.objects.filter(plant__user=self.request.user)
+        return PlantCareLog.objects.all()
     
     def perform_create(self, serializer):
-        # Verify the plant belongs to the user
-        plant = serializer.validated_data.get('plant')
-        if plant.user != self.request.user:
-            raise PermissionDenied("You don't have permission to add logs to this plant.")
         serializer.save()
 
 class AIChatSessionViewSet(viewsets.ModelViewSet):
     """API endpoint for AI chat sessions"""
+    queryset = AIChatSession.objects.all()
     serializer_class = AIChatSessionSerializer
-    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return AIChatSession.objects.filter(user=self.request.user)
+        return AIChatSession.objects.all()
     
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save()
 
 class AIChatMessageViewSet(viewsets.ModelViewSet):
     """API endpoint for AI chat messages"""
+    queryset = AIChatMessage.objects.all()
     serializer_class = AIChatMessageSerializer
-    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return AIChatMessage.objects.filter(session__user=self.request.user)
+        return AIChatMessage.objects.all()
     
     def perform_create(self, serializer):
-        # Verify the session belongs to the user
-        session = serializer.validated_data.get('session')
-        if session.user != self.request.user:
-            raise PermissionDenied("You don't have permission to add messages to this session.")
         serializer.save()
 
 class CalendarView(APIView):
@@ -291,7 +207,7 @@ class CalendarView(APIView):
     View to generate a calendar of upcoming plant care tasks.
     Returns tasks for the next 14 days, skipping rainy days for watering.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     
     def get_weather_forecast(self, location):
         """
@@ -348,10 +264,10 @@ class CalendarView(APIView):
             end_date = start_date + timedelta(days=14)
             
             # Get weather forecast
-            weather_forecast = self.get_weather_forecast(request.user.location if hasattr(request.user, 'location') else '')
+            weather_forecast = self.get_weather_forecast('')
             
-            # Get all user's plants
-            plants = Plant.objects.filter(user=request.user)
+            # Get all plants
+            plants = Plant.objects.all()
             
             # Generate tasks for each plant
             all_tasks = []

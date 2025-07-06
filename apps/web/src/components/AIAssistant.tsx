@@ -1,50 +1,42 @@
-
+// components/AIAssistant.tsx
 import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { askAI, getChatSessions, getChatMessages, sendChatMessage } from '@/integrations/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MessageSquare, Camera, Sun } from 'lucide-react';
 
 const AIAssistant: React.FC = () => {
-  const [messages, setMessages] = useState([
-    {
-      type: 'assistant',
-      content: "Hello! I'm your plant care assistant. You can ask me anything about plant care, upload photos for diagnosis, or get personalized advice for your plants. How can I help you today?",
-      timestamp: new Date()
-    }
-  ]);
+  const queryClient = useQueryClient();
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [inputMessage, setInputMessage] = useState('');
 
-  const sendMessage = () => {
-    if (!inputMessage.trim()) return;
-    
-    const userMessage = {
-      type: 'user',
+  // ── Fetch or create a chat session ──
+  const { data: sessions } = useQuery(['aiSessions'], getChatSessions);
+  // (you can pick the first session or create a new one)
+
+  // ── Fetch messages for current session ──
+  const { data: messages = [], isLoading: messagesLoading } = useQuery(
+    ['aiMessages', sessionId],
+    () => getChatMessages(sessionId!),
+    { enabled: !!sessionId }
+  );
+
+  // ── Mutation: send a new message ──
+  const sendMutation = useMutation(sendChatMessage, {
+    onSuccess: () => queryClient.invalidateQueries(['aiMessages', sessionId]),
+  });
+
+  const handleSend = () => {
+    if (!inputMessage.trim() || !sessionId) return;
+    sendMutation.mutate({
+      session: sessionId,
       content: inputMessage,
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
-    
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse = {
-        type: 'assistant',
-        content: "I understand your concern about your plant. Based on what you've described, here are some suggestions: Make sure your plant is getting adequate light, check the soil moisture, and consider the humidity levels in your room. Would you like more specific advice?",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, aiResponse]);
-    }, 1000);
-    
+      is_user: true,
+    });
     setInputMessage('');
   };
-
-  const quickQuestions = [
-    "Why are my plant leaves turning yellow?",
-    "How often should I water my monstera?",
-    "What's the best fertilizer for indoor plants?",
-    "How to deal with plant pests naturally?"
-  ];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -56,48 +48,45 @@ const AIAssistant: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {/* Chat Messages */}
+          {messagesLoading ? (
+            <p>Loading chat…</p>
+          ) : (
             <div className="h-96 overflow-y-auto space-y-4 p-4 bg-gray-50/50 rounded-lg">
-              {messages.map((message, index) => (
-                <div key={index} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                    message.type === 'user' 
-                      ? 'bg-green-600 text-white' 
-                      : 'bg-white border border-gray-200'
-                  }`}>
-                    <p className="text-sm">{message.content}</p>
-                    <p className={`text-xs mt-1 ${
-                      message.type === 'user' ? 'text-green-100' : 'text-gray-500'
-                    }`}>
-                      {message.timestamp.toLocaleTimeString()}
+              {messages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.is_user ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                      msg.is_user ? 'bg-green-600 text-white' : 'bg-white border'
+                    }`}
+                  >
+                    <p className="text-sm">{msg.content}</p>
+                    <p className="text-xs mt-1 text-gray-500">
+                      {new Date(msg.created_at).toLocaleTimeString()}
                     </p>
                   </div>
                 </div>
               ))}
             </div>
-            
-            {/* Input Area */}
-            <div className="flex space-x-2">
-              <Input
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Ask about your plants..."
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                className="flex-1"
-              />
-              <Button onClick={sendMessage} className="bg-green-600 hover:bg-green-700">
-                Send
-              </Button>
-              <Button variant="outline" className="border-green-200">
-                <Camera className="w-4 h-4" />
-              </Button>
-            </div>
+          )}
+
+          <div className="flex space-x-2 mt-4">
+            <Input
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              placeholder="Ask about your plants..."
+              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+              className="flex-1"
+            />
+            <Button onClick={handleSend} className="bg-green-600 hover:bg-green-700">
+              Send
+            </Button>
+            <Button variant="outline">
+              <Camera className="w-4 h-4" />
+            </Button>
           </div>
         </CardContent>
       </Card>
-      
-      {/* Quick Questions */}
+
       <Card className="bg-white/60 backdrop-blur-sm border-green-200">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -107,14 +96,19 @@ const AIAssistant: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {quickQuestions.map((question, index) => (
+            {[
+              "Why are my plant leaves turning yellow?",
+              "How often should I water my monstera?",
+              "What's the best fertilizer for indoor plants?",
+              "How to deal with plant pests naturally?",
+            ].map((q, idx) => (
               <Button
-                key={index}
+                key={idx}
                 variant="outline"
                 className="text-left h-auto p-3 border-green-200 hover:bg-green-50"
-                onClick={() => setInputMessage(question)}
+                onClick={() => setInputMessage(q)}
               >
-                {question}
+                {q}
               </Button>
             ))}
           </div>

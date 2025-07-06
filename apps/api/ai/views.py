@@ -13,15 +13,10 @@ from .groq_chain import get_plant_care_advice, identify_plant_from_image
 
 @api_view(['POST'])
 def ask_ai_view(request):
-    # Example dummy response
     question = request.data.get("question", "")
-    return Response({"response": f"You asked: {question}"})
+    return Response({"message": f"You asked: {question}"})
 
 class AIChatView(APIView):
-    """
-    API endpoint for interacting with the plant care AI assistant.
-    Supports text-based questions and image uploads for plant identification.
-    """
     parser_classes = (MultiPartParser, JSONParser)
     
     def post(self, request, *args, **kwargs):
@@ -61,13 +56,10 @@ class AIChatView(APIView):
             )
     
     def handle_message(self, message: str, plant_type: str, context: dict, image_url: str = None) -> Response:
-        """Process a text message with the AI assistant."""
         try:
-            # Add image URL to context if provided
             if image_url:
                 context['image_url'] = image_url
             
-            # Get response from the AI
             response = get_plant_care_advice(
                 plant_type=plant_type,
                 question=message,
@@ -83,9 +75,7 @@ class AIChatView(APIView):
             )
     
     def handle_plant_identification(self, image_url: str) -> Response:
-        """Handle plant identification from an uploaded image."""
         try:
-            # Get plant identification from the AI
             response = identify_plant_from_image(image_url)
             return Response(response)
             
