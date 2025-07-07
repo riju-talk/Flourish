@@ -2,6 +2,6 @@
   "name": "api-hartipal-smart-garden-guide",
   "version": "1.0.0",
   "scripts": {
-    "dev": "python manage.py runserver 0.0.0.0:8000"
+    "dev": "python manage.py runserver_plus --cert-file cert.pem --key-file key.pem"
   }
 }
