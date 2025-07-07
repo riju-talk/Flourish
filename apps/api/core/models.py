@@ -66,7 +66,7 @@ class Plant(models.Model):
         (90, 'Quarterly'),
         (180, 'Twice a year'),
     ]
-    
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, help_text="Common name of the plant")
     scientific_name = models.CharField(max_length=255, blank=True, null=True, help_text="Scientific name of the plant")
@@ -132,25 +132,6 @@ class PlantCareLog(models.Model):
     task_type = models.TextField()
     notes = models.TextField()
     performed_at = models.DateTimeField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-created_at']
-
-class AIChatSession(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    title = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-class AIChatMessage(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    session = models.ForeignKey(AIChatSession, on_delete=models.CASCADE)
-    role = models.TextField()
-    content = models.TextField()
-    image_url = models.TextField(null=True, blank=True)
-    is_user = models.BooleanField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

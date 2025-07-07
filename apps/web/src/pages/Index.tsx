@@ -1,6 +1,6 @@
 // pages/index.tsx
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -245,7 +245,7 @@ const Index = () => {
 
           {/* Calendar Panel */}
           <TabsContent value="calendar">
-            <CareCalendar tasks={todaysTasks} />
+            <CareCalendar/>
           </TabsContent>
 
           {/* AI Assistant Panel */}

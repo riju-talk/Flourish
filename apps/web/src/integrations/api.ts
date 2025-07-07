@@ -1,158 +1,159 @@
-import { supabase } from "@/integrations/supabase/client";
+import axios from 'axios'
 
-const API_BASE_URL = "http://127.0.0.1:8000/api"; 
+/** Core API base (no auth) */
+const API_BASE_URL = 'http://[127.0.0.1]:8000/api'
 
-// Helper function for making API calls
-const fetchWithAuth = async (
-  path: string,
-  method: "GET" | "POST" | "PATCH" | "DELETE",
-  body?: any
-) => {
-  const url = `${API_BASE_URL}${path}`;
-  const options: RequestInit = {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-    },
-  };
+/** Chat API base */
+const CHAT_BASE_URL = 'https://localhost:8000/ai-chat'
 
-  if (body) {
-    options.body = JSON.stringify(body);
-  }
-
-  const response = await fetch(url, options);
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || 'Something went wrong');
-  }
-
-  // For DELETE requests that don't return content
-  if (response.status === 204) {
-    return null;
-  }
-
-  return await response.json();
-};
-
-// ---- AUTH ----
-export const exchangeSupabaseToken = async () => {
-  const token = await getAccessToken();
-  const res = await fetch(`${API_BASE_URL}/auth/supabase/`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return await res.json();
-};
+/** Helper to build query strings */
+const qs = (params: Record<string, any>) =>
+  new URLSearchParams(params as Record<string, string>).toString()
 
 // ---- PROFILE ----
-export const getMyProfile = () => fetchWithAuth(`/profiles/me/`, "GET");
-export const updateMyProfile = (data: any) => 
-  fetchWithAuth(`/profiles/me/`, "PATCH", data);
+export async function getMyProfile() {
+  const { data } = await axios.get(`${API_BASE_URL}/profiles/me/`)
+  return data
+}
+
+export async function updateMyProfile(payload: any) {
+  const { data } = await axios.patch(
+    `${API_BASE_URL}/profiles/me/`,
+    payload
+  )
+  return data
+}
 
 // ---- PLANTS ----
-export const getPlants = (params?: { plant_type?: string; location?: string }) =>
-  fetchWithAuth(`/plants/?${new URLSearchParams(params || {})}`, "GET");
+export async function getPlants(
+  params: { plant_type?: string; location?: string } = {}
+) {
+  const qsString = qs(params)
+  const { data } = await axios.get(
+    `${API_BASE_URL}/plants/${qsString ? `?${qsString}` : ''}`
+  )
+  return data
+}
 
-export const createPlant = (plant: any) =>
-  fetchWithAuth(`/plants/`, "POST", plant);
+export async function createPlant(plant: any) {
+  const { data } = await axios.post(`${API_BASE_URL}/plants/`, plant)
+  return data
+}
 
-export const getPlant = (id: string) =>
-  fetchWithAuth(`/plants/${id}/`, "GET");
+export async function getPlant(id: string) {
+  const { data } = await axios.get(`${API_BASE_URL}/plants/${id}/`)
+  return data
+}
 
-export const updatePlant = (id: string, plant: any) =>
-  fetchWithAuth(`/plants/${id}/`, "PATCH", plant);
+export async function updatePlant(id: string, plant: any) {
+  const { data } = await axios.patch(
+    `${API_BASE_URL}/plants/${id}/`,
+    plant
+  )
+  return data
+}
 
-export const deletePlant = (id: string) =>
-  fetchWithAuth(`/plants/${id}/`, "DELETE");
+export async function deletePlant(id: string) {
+  await axios.delete(`${API_BASE_URL}/plants/${id}/`)
+}
 
 // ---- CARE TASKS ----
-export const getCareTasks = (params?: { status?: string; plant?: string }) =>
-  fetchWithAuth(`/care-tasks/?${new URLSearchParams(params || {})}`, "GET");
+export async function getCareTasks(
+  params: { status?: string; plant?: string } = {}
+) {
+  const qsString = qs(params)
+  const { data } = await axios.get(
+    `${API_BASE_URL}/care-tasks/${qsString ? `?${qsString}` : ''}`
+  )
+  return data
+}
 
-export const createCareTask = (task: any) =>
-  fetchWithAuth(`/care-tasks/`, "POST", task);
+export async function createCareTask(task: any) {
+  const { data } = await axios.post(`${API_BASE_URL}/care-tasks/`, task)
+  return data
+}
 
-export const updateCareTask = (id: string, task: any) =>
-  fetchWithAuth(`/care-tasks/${id}/`, "PATCH", task);
+export async function updateCareTask(id: string, task: any) {
+  const { data } = await axios.patch(
+    `${API_BASE_URL}/care-tasks/${id}/`,
+    task
+  )
+  return data
+}
 
-export const deleteCareTask = (id: string) =>
-  fetchWithAuth(`/care-tasks/${id}/`, "DELETE");
+export async function deleteCareTask(id: string) {
+  await axios.delete(`${API_BASE_URL}/care-tasks/${id}/`)
+}
 
 // ---- CARE LOGS ----
-export const getPlantCareLogs = (params?: { plant?: string }) =>
-  fetchWithAuth(`/plant-care-logs/?${new URLSearchParams(params || {})}`, "GET");
+export async function getPlantCareLogs(
+  params: { plant?: string } = {}
+) {
+  const qsString = qs(params)
+  const { data } = await axios.get(
+    `${API_BASE_URL}/plant-care-logs/${qsString ? `?${qsString}` : ''}`
+  )
+  return data
+}
 
-export const createPlantCareLog = (log: any) =>
-  fetchWithAuth(`/plant-care-logs/`, "POST", log);
+export async function createPlantCareLog(log: any) {
+  const { data } = await axios.post(
+    `${API_BASE_URL}/plant-care-logs/`,
+    log
+  )
+  return data
+}
 
-export const updatePlantCareLog = (id: string, log: any) =>
-  fetchWithAuth(`/plant-care-logs/${id}/`, "PATCH", log);
+export async function updatePlantCareLog(id: string, log: any) {
+  const { data } = await axios.patch(
+    `${API_BASE_URL}/plant-care-logs/${id}/`,
+    log
+  )
+  return data
+}
 
-export const deletePlantCareLog = (id: string) =>
-  fetchWithAuth(`/plant-care-logs/${id}/`, "DELETE");
-
-// ---- AI CHAT ----
-export const createChatSession = (title: string) =>
-  fetchWithAuth(`/ai-chat/sessions/`, "POST", { title });
-
-export const updateChatSession = (id: string, data: any) =>
-  fetchWithAuth(`/ai-chat/sessions/${id}/`, "PATCH", data);
-
-export const deleteChatSession = (id: string) =>
-  fetchWithAuth(`/ai-chat/sessions/${id}/`, "DELETE");
+export async function deletePlantCareLog(id: string) {
+  await axios.delete(`${API_BASE_URL}/plant-care-logs/${id}/`)
+}
 
 // ---- CALENDAR ----
-export const getCalendarEvents = (start: string, end: string) =>
-  fetchWithAuth(`/calendar/?start=${start}&end=${end}`, "GET");
-
-// ---- AI (Advanced) ----
-export async function getChatSessions() {
-  const res = await fetch(`${API_BASE_URL}/ai-chat/sessions/`);
-  if (!res.ok) throw new Error(`Error fetching sessions: ${res.status}`);
-  return res.json();
+export async function getCalendarEvents(
+  start: string,
+  end: string,
+  email?: string
+) {
+  const params: Record<string, any> = { start, end }
+  if (email) params.email = email
+  const { data } = await axios.get(
+    `${API_BASE_URL}/calendar/?${qs(params)}`
+  )
+  return data
 }
 
-export async function getChatMessages(session_id: string) {
-  const res = await fetch(`${API_BASE_URL}/ai-chat/messages/?session=${session_id}`);
-  if (!res.ok) throw new Error(`Error fetching messages: ${res.status}`);
-  return res.json();
+// ---- AI CHAT ----
+/** Fetch full message history for an email */
+export async function fetchChatMessages(email: string) {
+  const { data } = await axios.get(CHAT_BASE_URL, {
+    params: { email },
+  })
+  return data.messages
 }
 
-export async function sendChatMessage(payload: {
-  session: string;
-  content: string;
-  is_user: boolean;
-}) {
-  const res = await fetch(`${API_BASE_URL}/ai-chat/messages/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error(`Error sending message: ${res.status}`);
-  return res.json();
-}
-
-export async function askAI({ question }: { question: string }) {
-  const res = await fetch(`${API_BASE_URL}/ai/ask/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question }),
-  });
-  if (!res.ok) throw new Error(`Error asking AI: ${res.status}`);
-  return res.json();
-}
-
-const getAccessToken = async (): Promise<string | null> => {
-  const { data, error } = await supabase.auth.getSession();
-  if (error || !data.session) return null;
-  return data.session.access_token;
-};
-
-const authHeaders = async () => {
-  const token = await getAccessToken();
-  return {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
-};
+/** Send a new message; returns the assistant’s reply text */
+export async function sendChatMessage(
+    email: string,
+    question: string,
+    plant_type?: string,
+    context?: Record<string, any>
+  ) {
+    const payload: any = { email, question }
+    if (plant_type) payload.plant_type = plant_type
+    if (context) payload.context = context
+    
+    console.log(payload)
+    const { data } = await axios.post("https://localhost:8000/ai-chat/", payload)
+    return {
+      reply: data.response,
+      suggestions: data.suggestions,
+    }
+} 

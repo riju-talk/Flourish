@@ -51,31 +51,36 @@ conversation = ConversationChain(
     verbose=True
 )
 
-def get_plant_care_advice(plant_type: str, question: str, context: Optional[Dict] = None) -> Dict:
+def get_plant_care_advice(plant_type: Optional[str], question: str, context: Optional[Dict] = None) -> Dict:
     """
-    Get plant care advice for a specific plant type.
+    Get plant care advice for a specific plant type, or general advice if plant_type is not given.
     
     Args:
-        plant_type: Type of plant (e.g., 'snake plant', 'peace lily')
+        plant_type: Optional; Type of plant (e.g., 'snake plant')
         question: User's question about plant care
-        context: Additional context like location, symptoms, etc.
+        context: Optional; Additional context like location, symptoms, etc.
         
     Returns:
-        Dict containing the AI's response and any follow-up questions
+        Dict containing the AI's response and any follow-up suggestions
     """
-    # Build the prompt with context
     context_str = ""
     if context:
         context_str = "\nContext:\n"
         for key, value in context.items():
             context_str += f"- {key}: {value}\n"
-    
-    full_prompt = f"""Plant Type: {plant_type}
+
+    if plant_type:
+        full_prompt = f"""Plant Type: {plant_type}
 {context_str}
 Question: {question}
 
 Please provide specific care advice for this plant based on the information given."""
-    
+    else:
+        full_prompt = f"""{context_str}
+General Plant Care Question: {question}
+
+Please provide helpful advice or general best practices for this plant-related question."""
+
     try:
         response = conversation.predict(input=full_prompt)
         return {
@@ -88,6 +93,7 @@ Please provide specific care advice for this plant based on the information give
             'status': 'error',
             'message': str(e)
         }
+
 
 def identify_plant_from_image(image_url: str) -> Dict:
     """

@@ -4,8 +4,6 @@ from .models import (
     Plant,
     CareTask,
     PlantCareLog,
-    AIChatSession,
-    AIChatMessage,
 )
 from django.contrib.auth import get_user_model
 
@@ -36,16 +34,18 @@ class PlantSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'next_watering']
 
+class PlantNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Plant
+        fields = ['id', 'name']
+        read_only_fields = ['id', 'name']
+
 class CareTaskSerializer(serializers.ModelSerializer):
-    plant_name = serializers.CharField(source='plant.name', read_only=True)
-    
+    plants = PlantNameSerializer(source='plant', read_only=True)
+
     class Meta:
         model = CareTask
-        fields = [
-            'id', 'plant', 'plant_name', 'task_type', 'title', 'description',
-            'scheduled_date', 'completed_date', 'status', 'created_at', 'updated_at'
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ['id', 'title', 'task_type', 'scheduled_date', 'status', 'plants']
 
 class PlantCareLogSerializer(serializers.ModelSerializer):
     plant_name = serializers.CharField(source='plant.name', read_only=True)
@@ -58,19 +58,3 @@ class PlantCareLogSerializer(serializers.ModelSerializer):
             'notes', 'performed_at', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
-
-class AIChatMessageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AIChatMessage
-        fields = [
-            'id', 'session', 'role', 'content', 'image_url', 'is_user', 'created_at'
-        ]
-        read_only_fields = ['id', 'created_at']
-
-class AIChatSessionSerializer(serializers.ModelSerializer):
-    messages = AIChatMessageSerializer(many=True, read_only=True)
-    
-    class Meta:
-        model = AIChatSession
-        fields = ['id', 'title', 'created_at', 'updated_at', 'messages']
-        read_only_fields = ['id', 'created_at', 'updated_at', 'messages']
