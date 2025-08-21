@@ -1,5 +1,5 @@
 {
-  "name": "harit-pal",
+  "name": "plantmind",
   "private": true,
   "scripts": {
     "build": "turbo run build",

@@ -1,7 +1,7 @@
 {
-  "name": "api-hartipal-smart-garden-guide",
+  "name": "plantmind-api",
   "version": "1.0.0",
   "scripts": {
-    "dev": "python manage.py runserver_plus --cert-file cert.pem --key-file key.pem"
+    "dev": "uvicorn main:app --reload --host 0.0.0.0 --port 8000"
   }
 }

@@ -1,15 +1,14 @@
-// pages/index.tsx
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 
 import {
-  getPlants,
-  getCareTasks,
+  getDashboardData,
+  getTodayTasks,
   createPlant,
-} from '@/integrations/api';           // ← your API helpers
+  completeTask,
+} from '@/integrations/api';
 
 import {
   Card,
@@ -19,6 +18,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import {
   Tabs,
   TabsContent,
@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/tabs';
 
 import {
+  Brain,
   Calendar,
   MessageSquare,
   Plus,
@@ -34,6 +35,12 @@ import {
   Clock,
   LogOut,
   User,
+  Heart,
+  Zap,
+  Target,
+  TrendingUp,
+  Camera,
+  CheckCircle,
 } from 'lucide-react';
 
 import PlantCard from '@/components/PlantCard';
@@ -46,29 +53,25 @@ const Index = () => {
   const { toast } = useToast();
   const [showAddPlant, setShowAddPlant] = useState(false);
 
-  // — Fetch all plants for this user
+  // Fetch dashboard data
   const {
-    data: plants = [],
-    refetch: refetchPlants,
-    isLoading: plantsLoading,
+    data: dashboardData,
+    refetch: refetchDashboard,
+    isLoading: dashboardLoading,
   } = useQuery({
-    queryKey: ['plants', user?.id],
-    queryFn: () => getPlants(),
+    queryKey: ['dashboard', user?.uid],
+    queryFn: () => getDashboardData(user!.uid),
     enabled: !!user,
   });
 
-  // — Fetch today’s pending tasks
+  // Fetch today's tasks
   const {
     data: todaysTasks = [],
+    refetch: refetchTasks,
     isLoading: tasksLoading,
   } = useQuery({
-    queryKey: ['todaysTasks', user?.id],
-    queryFn: () =>
-      getCareTasks({ status: 'pending' }).then((tasks) =>
-        tasks.filter(
-          (t) => t.scheduled_date === new Date().toISOString().split('T')[0]
-        )
-      ),
+    queryKey: ['todaysTasks', user?.uid],
+    queryFn: () => getTodayTasks(user!.uid),
     enabled: !!user,
   });
 
@@ -79,9 +82,12 @@ const Index = () => {
 
   const handleAddPlant = async (plantData: any) => {
     try {
-      await createPlant({ ...plantData, user_id: user!.id });
-      toast({ title: 'Plant added!', description: 'Your plant was created.' });
-      refetchPlants();
+      await createPlant({ ...plantData, user_id: user!.uid });
+      toast({ 
+        title: 'Plant added! 🌱', 
+        description: 'Your AI care schedule has been generated.' 
+      });
+      refetchDashboard();
       setShowAddPlant(false);
     } catch (err: any) {
       toast({
@@ -92,22 +98,60 @@ const Index = () => {
     }
   };
 
-  // Stats
-  const healthyPlants = plants.filter((p) => p.health_status === 'Healthy').length;
-  const plantsNeedingAttention = plants.filter((p) => p.health_status === 'Needs Attention').length;
+  const handleCompleteTask = async (taskId: string) => {
+    try {
+      await completeTask(taskId);
+      toast({ 
+        title: 'Task completed! ✅', 
+        description: 'Great job taking care of your plants!' 
+      });
+      refetchTasks();
+      refetchDashboard();
+    } catch (err: any) {
+      toast({
+        title: 'Error completing task',
+        description: err.message || 'Something went wrong',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Get happiness emoji based on overall health
+  const getHappinessEmoji = (level: string) => {
+    switch (level) {
+      case 'happy': return '😊';
+      case 'concerned': return '😐';
+      case 'worried': return '😟';
+      default: return '🌱';
+    }
+  };
+
+  const stats = dashboardData?.stats || {
+    total_plants: 0,
+    healthy_plants: 0,
+    tasks_completed_today: 0,
+    streak_days: 0
+  };
+
+  const overallHealth = dashboardData?.overall_health_score || 0;
+  const happinessLevel = dashboardData?.happiness_level || 'happy';
+  const aiInsights = dashboardData?.ai_insights || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-green-100 sticky top-0 z-50">
+      <header className="bg-white/90 backdrop-blur-sm border-b border-emerald-100 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-lg">🌱</span>
+            <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center relative">
+              <Brain className="w-6 h-6 text-white absolute top-1 left-1" />
+              <span className="text-white font-bold text-lg absolute bottom-1 right-1">🌱</span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">HaritPal</h1>
-              <p className="text-sm text-gray-600">Your Smart Plant Care Assistant</p>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                PlantMind
+              </h1>
+              <p className="text-sm text-gray-600">Your AI Plant Care Agent</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -115,7 +159,7 @@ const Index = () => {
               <User className="w-4 h-4" />
               <span>{user?.email}</span>
             </div>
-            <Button onClick={() => setShowAddPlant(true)} className="bg-green-600 hover:bg-green-700">
+            <Button onClick={() => setShowAddPlant(true)} className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
               <Plus className="w-4 h-4 mr-2" />
               Add Plant
             </Button>
@@ -128,52 +172,88 @@ const Index = () => {
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        {/* Welcome */}
+        {/* Welcome Section */}
         <div className="text-center mb-12">
+          <div className="text-6xl mb-4">{getHappinessEmoji(happinessLevel)}</div>
           <h2 className="text-4xl font-bold text-gray-800 mb-4">
-            Welcome to Your Garden Dashboard
+            Your Garden is {happinessLevel === 'happy' ? 'Thriving' : happinessLevel === 'concerned' ? 'Doing Well' : 'Needs Attention'}!
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Track your plants, get personalized care reminders, and let our AI assistant help you grow a thriving garden
+            PlantMind AI is actively monitoring your plants and optimizing their care schedules
           </p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-white/60 backdrop-blur-sm border-green-200">
+        {/* Health Score & Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+          <Card className="md:col-span-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-0">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Overall Plant Health</h3>
+                  <p className="text-emerald-100">AI-calculated wellness score</p>
+                </div>
+                <Heart className="w-8 h-8 text-emerald-200" />
+              </div>
+              <div className="text-4xl font-bold mb-2">{overallHealth.toFixed(0)}%</div>
+              <Progress value={overallHealth} className="bg-emerald-400" />
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white/70 backdrop-blur-sm border-emerald-200">
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">{plants.length}</div>
+              <Zap className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-gray-800">{stats.total_plants}</div>
               <div className="text-sm text-gray-600">Total Plants</div>
             </CardContent>
           </Card>
-          <Card className="bg-white/60 backdrop-blur-sm border-blue-200">
+          
+          <Card className="bg-white/70 backdrop-blur-sm border-emerald-200">
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">{todaysTasks.length}</div>
+              <Target className="w-8 h-8 text-green-500 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-gray-800">{todaysTasks.length}</div>
               <div className="text-sm text-gray-600">Tasks Today</div>
             </CardContent>
           </Card>
-          <Card className="bg-white/60 backdrop-blur-sm border-yellow-200">
+          
+          <Card className="bg-white/70 backdrop-blur-sm border-emerald-200">
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-yellow-600 mb-2">{plantsNeedingAttention}</div>
-              <div className="text-sm text-gray-600">Needs Attention</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/60 backdrop-blur-sm border-green-200">
-            <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">{healthyPlants}</div>
-              <div className="text-sm text-gray-600">Healthy Plants</div>
+              <TrendingUp className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+              <div className="text-2xl font-bold text-gray-800">{stats.streak_days}</div>
+              <div className="text-sm text-gray-600">Day Streak</div>
             </CardContent>
           </Card>
         </div>
 
+        {/* AI Insights */}
+        {aiInsights.length > 0 && (
+          <Card className="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Brain className="w-5 h-5 text-purple-600" />
+                <span>AI Insights</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {aiInsights.map((insight, index) => (
+                  <div key={index} className="flex items-start space-x-2">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0" />
+                    <p className="text-gray-700">{insight}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Tabs */}
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8 bg-white/60 backdrop-blur-sm">
+          <TabsList className="grid w-full grid-cols-3 mb-8 bg-white/70 backdrop-blur-sm">
             <TabsTrigger value="dashboard" className="flex items-center space-x-2">
               <Sun className="w-4 h-4" /><span>Dashboard</span>
             </TabsTrigger>
             <TabsTrigger value="calendar" className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4" /><span>Care Calendar</span>
+              <Calendar className="w-4 h-4" /><span>AI Schedule</span>
             </TabsTrigger>
             <TabsTrigger value="assistant" className="flex items-center space-x-2">
               <MessageSquare className="w-4 h-4" /><span>AI Assistant</span>
@@ -182,30 +262,50 @@ const Index = () => {
 
           {/* Dashboard Panel */}
           <TabsContent value="dashboard" className="space-y-8">
-            <Card className="bg-white/60 backdrop-blur-sm border-green-200">
+            {/* Today's Tasks */}
+            <Card className="bg-white/70 backdrop-blur-sm border-emerald-200">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Clock className="w-5 h-5 text-green-600" /><span>Today's Tasks</span>
+                  <Clock className="w-5 h-5 text-emerald-600" />
+                  <span>Today's AI-Generated Tasks</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {tasksLoading ? (
                   <p>Loading tasks…</p>
                 ) : todaysTasks.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No tasks scheduled for today!</p>
+                  <div className="text-center py-8">
+                    <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                    <p className="text-gray-500">All tasks completed! Your plants are happy 🌱</p>
+                  </div>
                 ) : (
                   <div className="space-y-3">
-                    {todaysTasks.map((task) => (
-                      <div key={task.id} className="flex items-center justify-between p-3 bg-white/50 rounded-lg">
+                    {todaysTasks.map((task: any) => (
+                      <div key={task.id} className="flex items-center justify-between p-4 bg-white/50 rounded-lg border border-emerald-100">
                         <div className="flex items-center space-x-3">
                           <div className={`w-3 h-3 rounded-full ${
                             task.task_type === 'watering' ? 'bg-blue-500' :
                             task.task_type === 'fertilizing' ? 'bg-green-500' :
+                            task.task_type === 'checking' ? 'bg-purple-500' :
                             'bg-yellow-500'
                           }`} />
-                          <span className="font-medium">{task.title}</span>
+                          <div>
+                            <span className="font-medium">{task.title}</span>
+                            <p className="text-sm text-gray-500">{task.plant_name} • {task.estimated_time}</p>
+                          </div>
                         </div>
-                        <Badge variant="outline">{task.task_type}</Badge>
+                        <div className="flex items-center space-x-2">
+                          <Badge variant={task.priority === 'high' ? 'destructive' : 'outline'}>
+                            {task.priority}
+                          </Badge>
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleCompleteTask(task.id)}
+                            className="bg-emerald-500 hover:bg-emerald-600"
+                          >
+                            Complete
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -213,29 +313,30 @@ const Index = () => {
               </CardContent>
             </Card>
 
-            {/* Plants Grid / Fallback */}
+            {/* Plants Grid */}
             <div>
               <h3 className="text-2xl font-bold text-gray-800 mb-6">Your Plants</h3>
-              {plantsLoading ? (
+              {dashboardLoading ? (
                 <p>Loading plants…</p>
-              ) : plants.length === 0 ? (
-                <Card className="bg-white/60 backdrop-blur-sm border-green-200">
+              ) : !dashboardData?.plants || dashboardData.plants.length === 0 ? (
+                <Card className="bg-white/70 backdrop-blur-sm border-emerald-200">
                   <CardContent className="p-12 text-center">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Plus className="w-8 h-8 text-green-600" />
+                    <div className="w-20 h-20 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Brain className="w-10 h-10 text-emerald-600" />
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2">No plants yet</h3>
-                    <p className="text-gray-600 mb-4">
-                      Start your plant care journey by adding your first plant!
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">Ready to start your AI-powered garden?</h3>
+                    <p className="text-gray-600 mb-6">
+                      Add your first plant and let PlantMind create a personalized care schedule with proactive monitoring!
                     </p>
-                    <Button onClick={() => setShowAddPlant(true)} className="bg-green-600 hover:bg-green-700">
+                    <Button onClick={() => setShowAddPlant(true)} className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
+                      <Plus className="w-4 h-4 mr-2" />
                       Add Your First Plant
                     </Button>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {plants.map((plant) => (
+                  {dashboardData.plants.map((plant: any) => (
                     <PlantCard key={plant.id} plant={plant} />
                   ))}
                 </div>
@@ -245,7 +346,7 @@ const Index = () => {
 
           {/* Calendar Panel */}
           <TabsContent value="calendar">
-            <CareCalendar/>
+            <CareCalendar />
           </TabsContent>
 
           {/* AI Assistant Panel */}
