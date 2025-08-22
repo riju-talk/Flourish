@@ -1,6 +1,6 @@
-# 🧠 PlantMind – AI-Powered Plant Care Agent
+# 🧠 EcoMind – AI-Powered Plant Care Agent
 
-**PlantMind** is a revolutionary AI-powered plant care system that proactively monitors, analyzes, and optimizes plant health through intelligent automation. Unlike traditional plant care apps, PlantMind acts as your personal plant care agent, continuously learning and adapting to ensure your plants thrive.
+**EcoMind** is a revolutionary AI-powered plant care system that proactively monitors, analyzes, and optimizes plant health through intelligent automation. Unlike traditional plant care apps, PlantMind acts as your personal plant care agent, continuously learning and adapting to ensure your plants thrive.
 
 ---
 
