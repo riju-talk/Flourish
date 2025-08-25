@@ -59,9 +59,8 @@ const Index = () => {
     refetch: refetchDashboard,
     isLoading: dashboardLoading,
   } = useQuery({
-    queryKey: ['dashboard', user?.uid],
-    queryFn: () => getDashboardData(user!.uid),
-    enabled: !!user,
+    queryKey: ['dashboard'],
+    queryFn: getDashboardData,
   });
 
   // Fetch today's tasks
@@ -70,9 +69,8 @@ const Index = () => {
     refetch: refetchTasks,
     isLoading: tasksLoading,
   } = useQuery({
-    queryKey: ['todaysTasks', user?.uid],
-    queryFn: () => getTodayTasks(user!.uid),
-    enabled: !!user,
+    queryKey: ['todaysTasks'],
+    queryFn: getTodayTasks,
   });
 
   const handleSignOut = async () => {
@@ -82,7 +80,7 @@ const Index = () => {
 
   const handleAddPlant = async (plantData: any) => {
     try {
-      await createPlant({ ...plantData, user_id: user!.uid });
+      await createPlant(plantData);
       toast({ 
         title: 'Plant added! 🌱', 
         description: 'Your AI care schedule has been generated.' 
