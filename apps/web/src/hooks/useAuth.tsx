@@ -1,15 +1,23 @@
 import { useState, useEffect, createContext, useContext } from 'react';
+import { 
+  User as FirebaseUser, 
+  onAuthStateChanged, 
+  signInWithPopup, 
+  signOut as firebaseSignOut 
+} from 'firebase/auth';
+import { auth, googleProvider } from '@/lib/firebase';
 
-// Mock user interface for Firebase integration
 interface User {
   uid: string;
   email: string;
   displayName?: string;
+  photoURL?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -20,23 +28,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock authentication - replace with Firebase Auth
-    const mockUser = {
-      uid: 'user123',
-      email: 'demo@plantmind.ai',
-      displayName: 'Demo User'
-    };
-    
-    setUser(mockUser);
-    setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          displayName: firebaseUser.displayName || '',
+          photoURL: firebaseUser.photoURL || ''
+        });
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
+  const signInWithGoogle = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
-    setUser(null);
+    try {
+      await firebaseSignOut(auth);
+    } catch (error) {
+      console.error('Error signing out:', error);
+      throw error;
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

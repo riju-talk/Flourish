@@ -5,8 +5,8 @@ from api.core.config import settings
 
 # Initialize FastAPI
 app = FastAPI(
-    title="PlantMind AI",
-    description="Proactive AI Plant Care Agent",
+    title="Flourish",
+    description="Your Plant Care Companion",
     version="1.0.0"
 )
 
@@ -28,11 +28,11 @@ app.include_router(images.router, prefix="/api/images", tags=["images"])
 
 @app.get("/")
 async def root():
-    return {"message": "PlantMind AI - Your Proactive Plant Care Agent"}
+    return {"message": "Flourish - Your Plant Care Companion"}
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "PlantMind AI"}
+    return {"status": "ok", "service": "Flourish"}
 
 if __name__ == "__main__":
     import uvicorn

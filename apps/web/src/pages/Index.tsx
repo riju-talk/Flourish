@@ -75,7 +75,7 @@ const Index = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    toast({ title: 'Signed out', description: "You've been signed out." });
+    toast({ title: 'See you later! 🌱', description: "Keep nurturing those plants!" });
   };
 
   const handleAddPlant = async (plantData: any) => {
@@ -136,32 +136,31 @@ const Index = () => {
   const aiInsights = dashboardData?.ai_insights || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+    <div className="min-h-screen bg-gradient-to-br from-flourish-cream via-white to-flourish-sage/10">
       {/* Header */}
-      <header className="bg-white/90 backdrop-blur-sm border-b border-emerald-100 sticky top-0 z-50">
+      <header className="bg-white/95 backdrop-blur-sm border-b border-flourish-sage/20 sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center relative">
-              <Brain className="w-6 h-6 text-white absolute top-1 left-1" />
-              <span className="text-white font-bold text-lg absolute bottom-1 right-1">🌱</span>
+            <div className="w-12 h-12 bg-gradient-to-r from-flourish-green to-flourish-dark rounded-2xl flex items-center justify-center relative animate-bounce-gentle">
+              <span className="text-white font-bold text-2xl">🌱</span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                PlantMind
+              <h1 className="text-2xl font-bold text-flourish-forest">
+                Flourish
               </h1>
-              <p className="text-sm text-gray-600">Your AI Plant Care Agent</p>
+              <p className="text-sm text-flourish-dark/70">Your AI Plant Care Agent</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <div className="flex items-center space-x-2 text-sm text-flourish-dark/70 bg-flourish-cream/50 px-3 py-2 rounded-full">
               <User className="w-4 h-4" />
-              <span>{user?.email}</span>
+              <span className="font-medium">{user?.email}</span>
             </div>
-            <Button onClick={() => setShowAddPlant(true)} className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
+            <Button onClick={() => setShowAddPlant(true)} className="bg-gradient-to-r from-flourish-green to-flourish-dark hover:from-flourish-dark hover:to-flourish-forest shadow-lg">
               <Plus className="w-4 h-4 mr-2" />
               Add Plant
             </Button>
-            <Button variant="outline" onClick={handleSignOut} size="sm">
+            <Button variant="outline" onClick={handleSignOut} size="sm" className="border-flourish-sage/30 text-flourish-dark hover:bg-flourish-sage/10">
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
             </Button>
@@ -172,71 +171,77 @@ const Index = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
         <div className="text-center mb-12">
-          <div className="text-6xl mb-4">{getHappinessEmoji(happinessLevel)}</div>
-          <h2 className="text-4xl font-bold text-gray-800 mb-4">
+          <div className="text-6xl mb-4 animate-bounce-gentle">{getHappinessEmoji(happinessLevel)}</div>
+          <h2 className="text-4xl font-bold text-flourish-forest mb-4">
             Your Garden is {happinessLevel === 'happy' ? 'Thriving' : happinessLevel === 'concerned' ? 'Doing Well' : 'Needs Attention'}!
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            PlantMind AI is actively monitoring your plants and optimizing their care schedules
+          <p className="text-xl text-flourish-dark/80 max-w-2xl mx-auto">
+            Flourish AI is actively monitoring your plants and optimizing their care schedules
           </p>
         </div>
 
         {/* Health Score & Stats */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <Card className="md:col-span-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-0">
+          <Card className="md:col-span-2 bg-gradient-to-r from-flourish-green to-flourish-dark text-white border-0 shadow-xl">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-semibold">Overall Plant Health</h3>
-                  <p className="text-emerald-100">AI-calculated wellness score</p>
+                  <p className="text-flourish-cream/80">AI-calculated wellness score</p>
                 </div>
-                <Heart className="w-8 h-8 text-emerald-200" />
+                <Heart className="w-8 h-8 text-flourish-cream/80" />
               </div>
               <div className="text-4xl font-bold mb-2">{overallHealth.toFixed(0)}%</div>
               <Progress value={overallHealth} className="bg-emerald-400" />
             </CardContent>
           </Card>
           
-          <Card className="bg-white/70 backdrop-blur-sm border-emerald-200">
+          <Card className="bg-white/95 backdrop-blur-sm border-flourish-sage/30 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardContent className="p-6 text-center">
-              <Zap className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-800">{stats.total_plants}</div>
-              <div className="text-sm text-gray-600">Total Plants</div>
+              <div className="w-12 h-12 bg-flourish-green/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Zap className="w-6 h-6 text-flourish-green" />
+              </div>
+              <div className="text-2xl font-bold text-flourish-forest">{stats.total_plants}</div>
+              <div className="text-sm text-flourish-dark/70 font-medium">Total Plants</div>
             </CardContent>
           </Card>
           
-          <Card className="bg-white/70 backdrop-blur-sm border-emerald-200">
+          <Card className="bg-white/95 backdrop-blur-sm border-flourish-sage/30 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardContent className="p-6 text-center">
-              <Target className="w-8 h-8 text-green-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-800">{todaysTasks.length}</div>
-              <div className="text-sm text-gray-600">Tasks Today</div>
+              <div className="w-12 h-12 bg-flourish-dark/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Target className="w-6 h-6 text-flourish-dark" />
+              </div>
+              <div className="text-2xl font-bold text-flourish-forest">{todaysTasks.length}</div>
+              <div className="text-sm text-flourish-dark/70 font-medium">Tasks Today</div>
             </CardContent>
           </Card>
           
-          <Card className="bg-white/70 backdrop-blur-sm border-emerald-200">
+          <Card className="bg-white/95 backdrop-blur-sm border-flourish-sage/30 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardContent className="p-6 text-center">
-              <TrendingUp className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-gray-800">{stats.streak_days}</div>
-              <div className="text-sm text-gray-600">Day Streak</div>
+              <div className="w-12 h-12 bg-flourish-sage/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                <TrendingUp className="w-6 h-6 text-flourish-sage" />
+              </div>
+              <div className="text-2xl font-bold text-flourish-forest">{stats.streak_days}</div>
+              <div className="text-sm text-flourish-dark/70 font-medium">Day Streak</div>
             </CardContent>
           </Card>
         </div>
 
         {/* AI Insights */}
         {aiInsights.length > 0 && (
-          <Card className="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+          <Card className="mb-8 bg-gradient-to-r from-flourish-cream to-flourish-sage/20 border-flourish-sage/30 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Brain className="w-5 h-5 text-purple-600" />
-                <span>AI Insights</span>
+                <Brain className="w-5 h-5 text-flourish-green" />
+                <span className="text-flourish-forest font-bold">AI Insights</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {aiInsights.map((insight, index) => (
-                  <div key={index} className="flex items-start space-x-2">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0" />
-                    <p className="text-gray-700">{insight}</p>
+                  <div key={index} className="flex items-start space-x-3">
+                    <div className="w-3 h-3 bg-flourish-green rounded-full mt-2 flex-shrink-0" />
+                    <p className="text-flourish-dark font-medium">{insight}</p>
                   </div>
                 ))}
               </div>
@@ -246,14 +251,14 @@ const Index = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8 bg-white/70 backdrop-blur-sm">
-            <TabsTrigger value="dashboard" className="flex items-center space-x-2">
+          <TabsList className="grid w-full grid-cols-3 mb-8 bg-white/95 backdrop-blur-sm border border-flourish-sage/20 shadow-lg">
+            <TabsTrigger value="dashboard" className="flex items-center space-x-2 data-[state=active]:bg-flourish-green data-[state=active]:text-white font-medium">
               <Sun className="w-4 h-4" /><span>Dashboard</span>
             </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex items-center space-x-2">
+            <TabsTrigger value="calendar" className="flex items-center space-x-2 data-[state=active]:bg-flourish-green data-[state=active]:text-white font-medium">
               <Calendar className="w-4 h-4" /><span>AI Schedule</span>
             </TabsTrigger>
-            <TabsTrigger value="assistant" className="flex items-center space-x-2">
+            <TabsTrigger value="assistant" className="flex items-center space-x-2 data-[state=active]:bg-flourish-green data-[state=active]:text-white font-medium">
               <MessageSquare className="w-4 h-4" /><span>AI Assistant</span>
             </TabsTrigger>
           </TabsList>
@@ -261,11 +266,11 @@ const Index = () => {
           {/* Dashboard Panel */}
           <TabsContent value="dashboard" className="space-y-8">
             {/* Today's Tasks */}
-            <Card className="bg-white/70 backdrop-blur-sm border-emerald-200">
+            <Card className="bg-white/95 backdrop-blur-sm border-flourish-sage/30 shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Clock className="w-5 h-5 text-emerald-600" />
-                  <span>Today's AI-Generated Tasks</span>
+                  <Clock className="w-5 h-5 text-flourish-green" />
+                  <span className="text-flourish-forest font-bold">Today's AI-Generated Tasks</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>

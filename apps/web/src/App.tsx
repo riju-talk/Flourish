@@ -16,12 +16,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-flourish-cream via-white to-flourish-sage/20 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-gradient-to-r from-flourish-green to-flourish-dark rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-gentle">
             <span className="text-white font-bold text-lg">🌱</span>
           </div>
-          <p className="text-gray-600">Loading HaritPal...</p>
+          <p className="text-flourish-forest font-medium">Loading Flourish...</p>
         </div>
       </div>
     );
@@ -39,12 +39,12 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-flourish-cream via-white to-flourish-sage/20 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-gradient-to-r from-flourish-green to-flourish-dark rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-gentle">
             <span className="text-white font-bold text-lg">🌱</span>
           </div>
-          <p className="text-gray-600">Loading HaritPal...</p>
+          <p className="text-flourish-forest font-medium">Loading Flourish...</p>
         </div>
       </div>
     );

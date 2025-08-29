@@ -1,8 +1,8 @@
 # Overview
 
-EcoMind is an AI-powered plant care system that provides proactive monitoring, analysis, and optimization of plant health through intelligent automation. Unlike traditional plant care apps, EcoMind uses an AI agent approach to continuously monitor plant health metrics, predict issues before they become problems, and generate dynamic care schedules that adapt to plant responses.
+Flourish is an AI-powered plant care system that provides proactive monitoring, analysis, and optimization of plant health through intelligent automation. Unlike traditional plant care apps, Flourish uses an AI agent approach to continuously monitor plant health metrics, predict issues before they become problems, and generate dynamic care schedules that adapt to plant responses.
 
-The system features a conversational AI assistant with multi-modal capabilities (text and image analysis), automated health tracking with daily checklists, personalized care plans that evolve based on plant responses, and a modern dashboard that visualizes overall garden health with actionable insights.
+The system features a conversational AI assistant with multi-modal capabilities (text and image analysis), automated health tracking with daily checklists, personalized care plans that evolve based on plant responses, and a modern dashboard that visualizes overall garden health with actionable insights. The application has been completely rebranded from "EcoMind" to "Flourish" with a new cheerful, lively design using the custom Flourish color palette.
 
 # User Preferences
 
@@ -18,6 +18,16 @@ The web application is built with React 18, TypeScript, and Vite for fast develo
 
 The frontend follows a component-based architecture with reusable UI components, custom hooks for business logic, and a clean separation between presentation and data fetching layers.
 
+## Design System
+The application now features the "Flourish" design system with a custom color palette:
+- Flourish Cream (#DAD7CD) - Light neutral background
+- Flourish Sage (#A3B18A) - Medium sage green for accents
+- Flourish Green (#588157) - Primary green for buttons and highlights
+- Flourish Dark (#3A5A40) - Darker green for text and icons
+- Flourish Forest (#344E41) - Deep forest green for headings
+
+The design emphasizes a cheerful, lively aesthetic with rounded corners, subtle shadows, gentle animations, and card-based layouts that create a welcoming plant care experience.
+
 ## Backend Architecture
 The API is built with FastAPI (Python) following a clean architecture pattern with separate layers for routes, services, and models. Pydantic handles data validation and serialization, while the service layer contains business logic for plant analysis, care scheduling, and AI interactions.
 
@@ -27,7 +37,7 @@ The backend uses an in-memory data store for rapid prototyping but is designed t
 The system integrates with Groq's language models for advanced plant care intelligence. The AI service provides multi-modal chat capabilities, plant health analysis from images, proactive issue detection, and personalized care recommendations. The AI system is designed with extensible prompts and context management for consistent plant care expertise.
 
 ## Authentication System
-Currently implements a mock authentication system for development, designed to integrate with Firebase Auth for production. The authentication context provides user management, session handling, and route protection throughout the application.
+Now implements Google authentication via Firebase Auth, replacing the previous Supabase integration. The authentication system provides secure user management with Google OAuth sign-in, session handling, and route protection throughout the application. All Supabase dependencies have been completely removed.
 
 ## Data Models
 The system uses well-defined TypeScript interfaces and Pydantic models for type safety across the full stack. Core entities include Plants (with health metrics and care requirements), Tasks (AI-generated care schedules), Health Checks (systematic monitoring data), and Chat Messages (AI conversation history).
