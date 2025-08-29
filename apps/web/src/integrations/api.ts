@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// API base URL
+// API base URL - use localhost for backend in Replit
 const API_BASE_URL = 'http://localhost:8000/api';
 
 // Create axios instance
@@ -68,4 +68,15 @@ export async function getPlantImage(plantName: string, species: string = '') {
 export async function generateTasksForPlant(plantId: string) {
   const { data } = await api.post(`/tasks/generate/${plantId}`);
   return data;
+}
+
+// Get calendar events (placeholder implementation)
+export async function getCalendarEvents() {
+  // This would be implemented to get calendar-style events
+  return [];
+}
+
+// Get care tasks (alias for getTodayTasks)
+export async function getCareTasks() {
+  return getTodayTasks();
 }
