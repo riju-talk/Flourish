@@ -24,6 +24,15 @@ class Settings(BaseSettings):
     # Image Settings
     UNSPLASH_ACCESS_KEY: str = os.getenv("UNSPLASH_ACCESS_KEY", "")
     
+    # Plant API Settings
+    PLANT_ID_API_KEY: str = os.getenv("PLANT_ID_API_KEY", "")
+
+    # Weather API Settings
+    OPENWEATHER_API_KEY: str = os.getenv("OPENWEATHER_API_KEY", "")
+
+    # Firebase Settings
+    FIREBASE_SERVICE_ACCOUNT_KEY: str = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY", "")
+
     # Database (if needed later)
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")
     

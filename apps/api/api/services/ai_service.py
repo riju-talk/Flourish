@@ -1,14 +1,16 @@
 import os
 import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from groq import Groq
 from ..models.plant import Plant, HealthCheckItem, PlantAnalysis
 from ..models.chat import ChatMessage, ChatResponse, ImageAnalysis
+from .plant_id_service import PlantIDService
+from .weather_service import WeatherService
 
 # Initialize Groq client
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# System prompt for plant care assistant
+# Enhanced system prompt for plant care assistant
 PLANT_AI_SYSTEM_PROMPT = """You are PlantMind, an advanced AI plant care agent. You are proactive, knowledgeable, and caring about plant health. Your responsibilities include:
 
 1. PROACTIVE MONITORING: Analyze daily health check data and predict issues before they become serious
@@ -16,21 +18,28 @@ PLANT_AI_SYSTEM_PROMPT = """You are PlantMind, an advanced AI plant care agent. 
 3. HEALTH ANALYSIS: Evaluate plant health from images and user reports, providing actionable insights
 4. PERSONALIZED ADVICE: Give specific, actionable advice tailored to each plant and user's situation
 5. PREVENTIVE CARE: Suggest preventive measures to maintain optimal plant health
+6. EXTERNAL DATA INTEGRATION: Use weather data and plant identification APIs for better recommendations
 
-When analyzing plant health:
-- Consider species-specific needs
-- Factor in environmental conditions
+When analyzing plant health or providing care advice:
+- Consider species-specific needs from plant databases
+- Factor in local weather conditions
 - Look for early warning signs
 - Provide specific, actionable recommendations
 - Suggest optimal timing for interventions
+- Ask clarifying questions when information is insufficient
 
-Be encouraging, informative, and always focus on helping plants thrive."""
+When uncertain about plant species or environmental conditions, ask follow-up questions like:
+- "Is your plant indoors or outdoors?"
+- "What type of lighting does your plant receive?"
+- "Can you describe the soil type and pot size?"
+- "What's the typical temperature range in your location?"
+
+Always respond in a helpful, encouraging tone and focus on helping plants thrive."""
 
 class AIService:
     @staticmethod
     async def analyze_plant_health(plant: Plant, health_checks: List[HealthCheckItem]) -> PlantAnalysis:
-        """AI-powered plant health analysis"""
-        
+
         # Prepare context for AI analysis
         context = f"""
         Plant: {plant.name} ({plant.species})
@@ -153,3 +162,62 @@ class AIService:
                 recommendations=["Please try uploading a clearer image"],
                 confidence=0.0
             )
+
+    @staticmethod
+    async def _research_plant_info(plant_name: str) -> str:
+        """Research plant information using AI"""
+        prompt = f"""
+        Provide comprehensive plant care information for: {plant_name}
+
+        Return a JSON object with the following structure:
+        {{
+            "scientific_name": "Scientific name",
+            "plant_type": "indoor/outdoor/both",
+            "size": "small/medium/large",
+            "toxicity": "non-toxic/mildly-toxic/toxic/highly-toxic",
+            "sunlight": "Light requirements description",
+            "watering_days": 7,
+            "watering_amount": "Watering description",
+            "soil_type": "Soil preference",
+            "humidity": "Humidity preference",
+            "fertilizer": "Fertilizer description",
+            "fertilizer_days": 30,
+            "pests": ["Common pest 1", "Common pest 2"],
+            "locations": ["Best location 1", "Best location 2"],
+            "care_instructions": "Detailed care instructions",
+            "fun_facts": ["Fact 1", "Fact 2"]
+        }}
+
+        Base this on general botanical knowledge and make it comprehensive but practical for home care.
+        """
+
+        try:
+            response = groq_client.chat.completions.create(
+                model="llama-3.1-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=800
+            )
+
+            return response.choices[0].message.content
+
+        except Exception as e:
+            print(f"Error researching plant {plant_name}: {e}")
+            # Return a default JSON structure
+            return json.dumps({
+                "scientific_name": f"{plant_name.title()} spp.",
+                "plant_type": "indoor",
+                "size": "medium",
+                "toxicity": "non-toxic",
+                "sunlight": "Medium indirect light",
+                "watering_days": 7,
+                "watering_amount": "Moderate",
+                "soil_type": "Well-draining potting mix",
+                "humidity": "Moderate (40-60%)",
+                "fertilizer": "Balanced houseplant fertilizer",
+                "fertilizer_days": 30,
+                "pests": ["Spider mites", "Aphids"],
+                "locations": ["Living Room"],
+                "care_instructions": "Monitor regularly and adjust care based on plant response",
+                "fun_facts": ["A wonderful addition to any plant collection!"]
+            })

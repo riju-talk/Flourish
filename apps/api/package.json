@@ -1,7 +1,7 @@
 {
-  "name": "Ecomind-api",
+  "name": "Flourish-api",
   "version": "1.0.0",
-  "description": "Ecomind AI - FastAPI Backend",
+  "description": "Flourish AI - FastAPI Backend",
   "scripts": {
     "dev": "uvicorn main:app --reload --host localhost --port 8000",
     "start": "uvicorn main:app --host 0.0.0.0 --port 8000",

@@ -8,6 +8,8 @@ import {
   getTodayTasks,
   createPlant,
   completeTask,
+  createAutonomousPlant,
+  getPlants,
 } from '@/integrations/api';
 
 import {
@@ -44,14 +46,13 @@ import {
 } from 'lucide-react';
 
 import PlantCard from '@/components/PlantCard';
-import CareCalendar from '@/components/CareCalendar';
+import ScheduleCalendar from '@/components/ScheduleCalendar';
 import AIAssistant from '@/components/AIAssistant';
-import AddPlantDialog from '@/components/AddPlantDialog';
+import AddPlantForm from '@/components/AddPlantForm';
 
 const Index = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
-  const [showAddPlant, setShowAddPlant] = useState(false);
 
   // Fetch dashboard data
   const {
@@ -86,7 +87,6 @@ const Index = () => {
         description: 'Your AI care schedule has been generated.' 
       });
       refetchDashboard();
-      setShowAddPlant(false);
     } catch (err: any) {
       toast({
         title: 'Error adding plant',
@@ -156,10 +156,6 @@ const Index = () => {
               <User className="w-4 h-4" />
               <span className="font-medium">{user?.email}</span>
             </div>
-            <Button onClick={() => setShowAddPlant(true)} className="bg-gradient-to-r from-flourish-green to-flourish-dark hover:from-flourish-dark hover:to-flourish-forest shadow-lg">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Plant
-            </Button>
             <Button variant="outline" onClick={handleSignOut} size="sm" className="border-flourish-sage/30 text-flourish-dark hover:bg-flourish-sage/10">
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
@@ -331,7 +327,7 @@ const Index = () => {
                     <p className="text-gray-600 mb-6">
                       Add your first plant and let PlantMind create a personalized care schedule with proactive monitoring!
                     </p>
-                    <Button onClick={() => setShowAddPlant(true)} className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
+                    <Button onClick={() => {}} className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Your First Plant
                     </Button>
@@ -349,7 +345,7 @@ const Index = () => {
 
           {/* Calendar Panel */}
           <TabsContent value="calendar">
-            <CareCalendar />
+            <ScheduleCalendar />
           </TabsContent>
 
           {/* AI Assistant Panel */}
@@ -359,10 +355,10 @@ const Index = () => {
         </Tabs>
       </div>
 
-      <AddPlantDialog
-        open={showAddPlant}
-        onOpenChange={setShowAddPlant}
-        onAddPlant={handleAddPlant}
+      <AddPlantForm
+        onPlantAdded={() => {
+          refetchDashboard();
+        }}
       />
     </div>
   );

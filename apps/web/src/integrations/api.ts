@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { auth } from '@/lib/firebase';
 
-// API base URL - use localhost for backend in Replit
-const API_BASE_URL = 'http://localhost:8000/api';
+// API base URL - use environment variable or default to localhost for backend in Replit
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // Create axios instance
 const api = axios.create({
@@ -11,10 +12,30 @@ const api = axios.create({
   },
 });
 
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  async (config) => {
+    const user = auth.currentUser;
+    if (user) {
+      const token = await user.getIdToken();
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // ---- PLANTS ----
 export async function getPlants() {
   const { data } = await api.get('/plants');
   return data.plants;
+}
+
+export async function createAutonomousPlant(plantName: string, userLocation?: string) {
+  const { data } = await api.post('/plants/autonomous', { plant_name: plantName, user_location: userLocation });
+  return data;
 }
 
 export async function createPlant(plant: any) {
@@ -24,6 +45,26 @@ export async function createPlant(plant: any) {
 
 export async function submitHealthCheck(plantId: string, healthCheck: any) {
   const { data } = await api.post(`/plants/${plantId}/health-check`, healthCheck);
+  return data;
+}
+
+export async function getPlantSchedule(plantId: string) {
+  const { data } = await api.get(`/plants/${plantId}/schedule`);
+  return data;
+}
+
+export async function completeCareTask(plantId: string, scheduleId: string, notes?: string) {
+  const { data } = await api.post(`/plants/${plantId}/schedule/complete`, { schedule_id: scheduleId, notes });
+  return data;
+}
+
+export async function getTodaySchedule() {
+  const { data } = await api.get('/plants/calendar/today');
+  return data;
+}
+
+export async function getWeekSchedule() {
+  const { data } = await api.get('/plants/calendar/week');
   return data;
 }
 

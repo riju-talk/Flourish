@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: flourish-api
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: NODE_ENV
+        value: production
+      # Add your environment variables here or set them in Render dashboard
+      # - key: GROQ_API_KEY
+      #   value: your_groq_api_key
+      # - key: PLANT_ID_API_KEY
+      #   value: your_plant_id_api_key

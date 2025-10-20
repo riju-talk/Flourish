@@ -4,18 +4,52 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "inputs": ["$TURBO_DEFAULT$", ".env*", "src/**", "public/**", "index.html"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": [
+        "NODE_ENV",
+        "VITE_*",
+        "FIREBASE_*",
+        "API_BASE_URL"
+      ]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": ["^lint"],
+      "inputs": ["src/**/*.{ts,tsx,js,jsx}", "*.config.{js,ts}"],
+      "outputs": []
     },
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": ["^check-types"],
+      "inputs": ["src/**/*.{ts,tsx}", "tsconfig.json"],
+      "outputs": []
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": [
+        "NODE_ENV",
+        "VITE_*",
+        "FIREBASE_*",
+        "API_BASE_URL"
+      ]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**/*.{ts,tsx,js,jsx}", "test/**/*", "**/*.test.{ts,tsx,js,jsx}"],
+      "outputs": ["coverage/**"]
+    },
+    "preview": {
+      "dependsOn": ["build"],
+      "cache": false
     }
-  }
+  },
+  "globalDependencies": [
+    "package.json",
+    "tsconfig.json",
+    "turbo.json"
+  ],
+  "globalEnv": [
+    "NODE_ENV",
+    "CI"
+  ]
 }
