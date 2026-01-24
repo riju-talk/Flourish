@@ -1,5 +1,3 @@
-import { auth } from '@/lib/firebase';
-
 interface LogLevel {
   ERROR: 'error';
   WARN: 'warn';
@@ -90,7 +88,8 @@ class Logger {
 
   // Analytics-specific methods
   async trackUserAction(action: string, metadata?: Record<string, any>): Promise<void> {
-    const user = auth.currentUser;
+    const storedUser = localStorage.getItem('flourish_user');
+    const user = storedUser ? JSON.parse(storedUser) : null;
     const context: LogContext = {
       userId: user?.uid,
       action,
@@ -118,7 +117,8 @@ class Logger {
   }
 
   async trackError(error: Error, component?: string, metadata?: Record<string, any>): Promise<void> {
-    const user = auth.currentUser;
+    const storedUser = localStorage.getItem('flourish_user');
+    const user = storedUser ? JSON.parse(storedUser) : null;
     const context: LogContext = {
       userId: user?.uid,
       component,

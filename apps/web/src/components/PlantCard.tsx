@@ -1,166 +1,63 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Sun, MapPin, Clock, Droplets } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
-
-interface Plant {
-  id: string;
-  name: string;
-  type: string;
-  location: string;
-  sunlight_requirement: string;
-  last_watered_date: string | null;
-  health_status: string;
-  image_url: string | null;
-  watering_frequency_days: number;
-}
+import { ReactNode } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Droplets, Thermometer, Sun, Leaf } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface PlantCardProps {
-  plant: Plant;
+  plant: {
+    id: string;
+    name: string;
+    species: string;
+    image_url?: string;
+    health_score: number;
+    watering_frequency_days: number;
+    sunlight_requirement: string;
+    plant_type: string;
+  };
+  className?: string;
 }
 
-const PlantCard: React.FC<PlantCardProps> = ({ plant }) => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const getHealthColor = (health: string) => {
-    switch (health) {
-      case 'Healthy':
-        return 'bg-flourish-green/20 text-flourish-forest border-flourish-green/30';
-      case 'Needs Attention':
-        return 'bg-amber-100 text-amber-800 border-amber-200';
-      case 'Critical':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-flourish-sage/20 text-flourish-dark border-flourish-sage/30';
-    }
-  };
-
-  const getNextWateringDate = () => {
-    if (!plant.last_watered_date) return 'Today';
-    
-    const lastWatered = new Date(plant.last_watered_date);
-    const nextWatering = new Date(lastWatered);
-    nextWatering.setDate(lastWatered.getDate() + plant.watering_frequency_days);
-    
-    const today = new Date();
-    const diffTime = nextWatering.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays <= 0) return 'Today';
-    if (diffDays === 1) return 'Tomorrow';
-    return `In ${diffDays} days`;
-  };
-
-  const handleWaterNow = async () => {
-    try {
-      // For now, just show a success message - can be connected to API later
-      toast({
-        title: "Plant watered! 💧",
-        description: `${plant.name} has been watered successfully.`,
-      });
-
-      // Refresh the data
-      queryClient.invalidateQueries({ queryKey: ['plants'] });
-      queryClient.invalidateQueries({ queryKey: ['todaysTasks'] });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update watering record",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getLastWateredText = () => {
-    if (!plant.last_watered_date) return 'Never watered';
-    
-    const lastWatered = new Date(plant.last_watered_date);
-    const today = new Date();
-    const diffTime = today.getTime() - lastWatered.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return '1 day ago';
-    return `${diffDays} days ago`;
-  };
-
+export const PlantCard = ({ plant, className }: PlantCardProps) => {
   return (
-    <Card className="bg-white/95 border-2 border-flourish-sage/30 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 overflow-hidden relative">
-      {plant.image_url && (
-        <div className="h-40 bg-gradient-to-br from-flourish-cream to-flourish-sage/20 overflow-hidden relative">
-          <img 
-            src={plant.image_url} 
-            alt={plant.name}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+    <Card className={`glass-card rounded-3xl overflow-hidden group border-none ${className}`}>
+      <div className="relative h-48 overflow-hidden">
+        <img
+          src={plant.image_url || "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=300&fit=crop"}
+          alt={plant.name}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+        />
+        <div className="absolute top-3 left-3">
+          <Badge className="bg-primary/80 backdrop-blur-md text-white border-none py-1 px-3">
+            {plant.plant_type || "Indoor"}
+          </Badge>
         </div>
-      )}
-      
-      <div className="absolute top-3 right-3">
-        <Badge 
-          className={`${getHealthColor(plant.health_status)} text-xs px-3 py-1 rounded-full border font-semibold shadow-sm`}
-        >
-          {plant.health_status}
-        </Badge>
       </div>
-      
-      <CardHeader className="pb-3 pt-4">
-        <CardTitle className="text-xl font-bold text-flourish-forest">{plant.name}</CardTitle>
-        <Badge variant="outline" className="w-fit bg-flourish-cream/50 text-flourish-dark border-flourish-sage/40 font-medium">
-          {plant.type}
-        </Badge>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 gap-3">
-          <div className="flex items-center space-x-2 text-sm text-flourish-dark/80">
-            <div className="w-8 h-8 bg-flourish-sage/20 rounded-full flex items-center justify-center">
-              <MapPin className="w-4 h-4 text-flourish-green" />
-            </div>
-            <span className="font-medium">{plant.location}</span>
+      <CardContent className="p-5 space-y-4">
+        <div>
+          <h3 className="text-xl font-bold text-foreground">{plant.name}</h3>
+          <p className="text-xs text-muted-foreground italic">{plant.species}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <Droplets size={14} className="text-blue-500" />
+            {plant.watering_frequency_days}d cycle
           </div>
-          
-          <div className="flex items-center space-x-2 text-sm text-flourish-dark/80">
-            <div className="w-8 h-8 bg-flourish-green/20 rounded-full flex items-center justify-center">
-              <Sun className="w-4 h-4 text-flourish-green" />
-            </div>
-            <span className="font-medium">{plant.sunlight_requirement}</span>
-          </div>
-          
-          <div className="flex items-center space-x-2 text-sm text-flourish-dark/80">
-            <div className="w-8 h-8 bg-flourish-dark/20 rounded-full flex items-center justify-center">
-              <Clock className="w-4 h-4 text-flourish-dark" />
-            </div>
-            <span className="font-medium">Last watered: {getLastWateredText()}</span>
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <Sun size={14} className="text-yellow-500" />
+            {plant.sunlight_requirement}
           </div>
         </div>
-        
-        <div className="pt-3 border-t border-flourish-sage/20">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-flourish-forest">
-              Next watering: 
-            </p>
-            <span className="text-sm font-bold text-flourish-green">
-              {getNextWateringDate()}
-            </span>
+
+        <div className="space-y-2">
+          <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <span>Health Score</span>
+            <span>{plant.health_score}%</span>
           </div>
-          <Button 
-            size="sm" 
-            className="w-full bg-gradient-to-r from-flourish-green to-flourish-dark hover:from-flourish-dark hover:to-flourish-forest text-white font-semibold py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-            onClick={handleWaterNow}
-          >
-            <Droplets className="w-4 h-4 mr-2" />
-            Water Now 💧
-          </Button>
+          <Progress value={plant.health_score} className="h-1.5 bg-secondary" />
         </div>
       </CardContent>
     </Card>
   );
 };
-
-export default PlantCard;

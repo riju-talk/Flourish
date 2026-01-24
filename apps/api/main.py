@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import plants, dashboard, chat, tasks, images
+from api.routes import plants, dashboard, chat, tasks, images, mcp, documents
 from api.core.config import settings
 from api.core.auth import verify_firebase_token
 
@@ -26,6 +26,8 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"]
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(images.router, prefix="/api/images", tags=["images"], dependencies=[Depends(verify_firebase_token)])
+app.include_router(mcp.router, prefix="/api/mcp", tags=["mcp"], dependencies=[Depends(verify_firebase_token)])
+app.include_router(documents.router, prefix="/api/documents", tags=["documents"], dependencies=[Depends(verify_firebase_token)])
 
 @app.get("/")
 async def root():

@@ -5,9 +5,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { Leaf } from "lucide-react";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Chat from "./pages/Chat";
+import CalendarPage from "./pages/Calendar";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -15,47 +17,47 @@ const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-flourish-cream via-white to-flourish-sage/20 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-flourish-green to-flourish-dark rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-gentle">
-            <span className="text-white font-bold text-lg">🌱</span>
+          <div className="w-20 h-20 vibrant-gradient rounded-3xl flex items-center justify-center mx-auto mb-6 animate-bounce shadow-2xl">
+            <Leaf className="text-white" size={40} />
           </div>
-          <p className="text-flourish-forest font-medium">Loading Flourish...</p>
+          <p className="text-primary font-bold text-xl tracking-tight">Flourishing...</p>
         </div>
       </div>
     );
   }
-  
+
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-flourish-cream via-white to-flourish-sage/20 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-flourish-green to-flourish-dark rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-gentle">
-            <span className="text-white font-bold text-lg">🌱</span>
+          <div className="w-20 h-20 vibrant-gradient rounded-3xl flex items-center justify-center mx-auto mb-6 animate-bounce shadow-2xl">
+            <Leaf className="text-white" size={40} />
           </div>
-          <p className="text-flourish-forest font-medium">Loading Flourish...</p>
+          <p className="text-primary font-bold text-xl tracking-tight">Flourishing...</p>
         </div>
       </div>
     );
   }
-  
+
   if (user) {
     return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
@@ -68,29 +70,37 @@ const App = () => (
         <AuthProvider>
           <BrowserRouter>
             <Routes>
-              <Route 
-                path="/" 
+              <Route
+                path="/"
                 element={
                   <ProtectedRoute>
                     <Index />
                   </ProtectedRoute>
-                } 
+                }
               />
-              <Route 
-                path="/chat" 
+              <Route
+                path="/chat"
                 element={
                   <ProtectedRoute>
                     <Chat />
                   </ProtectedRoute>
-                } 
+                }
               />
-              <Route 
-                path="/auth" 
+              <Route
+                path="/calendar"
+                element={
+                  <ProtectedRoute>
+                    <CalendarPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/auth"
                 element={
                   <PublicRoute>
                     <Auth />
                   </PublicRoute>
-                } 
+                }
               />
               <Route path="*" element={<NotFound />} />
             </Routes>

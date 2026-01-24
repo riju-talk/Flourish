@@ -1,365 +1,104 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
-
-import {
-  getDashboardData,
-  getTodayTasks,
-  createPlant,
-  completeTask,
-  createAutonomousPlant,
-  getPlants,
-} from '@/integrations/api';
-
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-
-import {
-  Brain,
-  Calendar,
-  MessageSquare,
-  Plus,
-  Sun,
-  Clock,
-  LogOut,
-  User,
-  Heart,
-  Zap,
-  Target,
-  TrendingUp,
-  Camera,
-  CheckCircle,
-} from 'lucide-react';
-
-import PlantCard from '@/components/PlantCard';
-import ScheduleCalendar from '@/components/ScheduleCalendar';
-import AIAssistant from '@/components/AIAssistant';
-import AddPlantForm from '@/components/AddPlantForm';
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Navbar } from "@/components/Navbar";
+import { PlantCard } from "@/components/PlantCard";
+import { DailyChecklist } from "@/components/DailyChecklist";
+import { LeaderboardPreview } from "@/components/LeaderboardPreview";
+import { Button } from "@/components/ui/button";
+import { Plus, Leaf, Calendar as CalendarIcon, Trophy } from "lucide-react";
+import { getPlants, getTodaySchedule } from "@/integrations/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
-  const { user, signOut } = useAuth();
-  const { toast } = useToast();
-
-  // Fetch dashboard data
-  const {
-    data: dashboardData,
-    refetch: refetchDashboard,
-    isLoading: dashboardLoading,
-  } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: getDashboardData,
+  const { data: plants, isLoading: plantsLoading } = useQuery({
+    queryKey: ["plants"],
+    queryFn: getPlants,
   });
 
-  // Fetch today's tasks
-  const {
-    data: todaysTasks = [],
-    refetch: refetchTasks,
-    isLoading: tasksLoading,
-  } = useQuery({
-    queryKey: ['todaysTasks'],
-    queryFn: getTodayTasks,
+  const { data: schedule, isLoading: scheduleLoading } = useQuery({
+    queryKey: ["today-schedule"],
+    queryFn: getTodaySchedule,
   });
-
-  const handleSignOut = async () => {
-    await signOut();
-    toast({ title: 'See you later! 🌱', description: "Keep nurturing those plants!" });
-  };
-
-  const handleAddPlant = async (plantData: any) => {
-    try {
-      await createPlant(plantData);
-      toast({ 
-        title: 'Plant added! 🌱', 
-        description: 'Your AI care schedule has been generated.' 
-      });
-      refetchDashboard();
-    } catch (err: any) {
-      toast({
-        title: 'Error adding plant',
-        description: err.message || 'Something went wrong',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleCompleteTask = async (taskId: string) => {
-    try {
-      await completeTask(taskId);
-      toast({ 
-        title: 'Task completed! ✅', 
-        description: 'Great job taking care of your plants!' 
-      });
-      refetchTasks();
-      refetchDashboard();
-    } catch (err: any) {
-      toast({
-        title: 'Error completing task',
-        description: err.message || 'Something went wrong',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Get happiness emoji based on overall health
-  const getHappinessEmoji = (level: string) => {
-    switch (level) {
-      case 'happy': return '😊';
-      case 'concerned': return '😐';
-      case 'worried': return '😟';
-      default: return '🌱';
-    }
-  };
-
-  const stats = dashboardData?.stats || {
-    total_plants: 0,
-    healthy_plants: 0,
-    tasks_completed_today: 0,
-    streak_days: 0
-  };
-
-  const overallHealth = dashboardData?.overall_health_score || 0;
-  const happinessLevel = dashboardData?.happiness_level || 'happy';
-  const aiInsights = dashboardData?.ai_insights || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-flourish-cream via-white to-flourish-sage/10">
-      {/* Header */}
-      <header className="bg-white/95 backdrop-blur-sm border-b border-flourish-sage/20 sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-flourish-green to-flourish-dark rounded-2xl flex items-center justify-center relative animate-bounce-gentle">
-              <span className="text-white font-bold text-2xl">🌱</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-flourish-forest">
-                Flourish
-              </h1>
-              <p className="text-sm text-flourish-dark/70">Your AI Plant Care Agent</p>
-            </div>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Header Section */}
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in duration-700">
+          <div>
+            <h1 className="text-4xl font-bold text-primary flex items-center gap-2">
+              Welcome back, Botanist <Leaf className="text-primary leaf-pulse" />
+            </h1>
+            <p className="text-muted-foreground mt-2">Your garden is thriving today. You have {schedule?.tasks?.length || 0} tasks to complete.</p>
           </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm text-flourish-dark/70 bg-flourish-cream/50 px-3 py-2 rounded-full">
-              <User className="w-4 h-4" />
-              <span className="font-medium">{user?.email}</span>
-            </div>
-            <Button variant="outline" onClick={handleSignOut} size="sm" className="border-flourish-sage/30 text-flourish-dark hover:bg-flourish-sage/10">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
+          <div className="flex gap-3">
+            <Button className="vibrant-gradient hover-lift text-white rounded-full px-6">
+              <Plus className="mr-2 h-4 w-4" /> Add New Plant
+            </Button>
+            <Button variant="outline" className="rounded-full glass-card hover-lift">
+              <CalendarIcon className="mr-2 h-4 w-4" /> View Calendar
             </Button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
-        <div className="text-center mb-12">
-          <div className="text-6xl mb-4 animate-bounce-gentle">{getHappinessEmoji(happinessLevel)}</div>
-          <h2 className="text-4xl font-bold text-flourish-forest mb-4">
-            Your Garden is {happinessLevel === 'happy' ? 'Thriving' : happinessLevel === 'concerned' ? 'Doing Well' : 'Needs Attention'}!
-          </h2>
-          <p className="text-xl text-flourish-dark/80 max-w-2xl mx-auto">
-            Flourish AI is actively monitoring your plants and optimizing their care schedules
-          </p>
-        </div>
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-        {/* Health Score & Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <Card className="md:col-span-2 bg-gradient-to-r from-flourish-green to-flourish-dark text-white border-0 shadow-xl">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold">Overall Plant Health</h3>
-                  <p className="text-flourish-cream/80">AI-calculated wellness score</p>
-                </div>
-                <Heart className="w-8 h-8 text-flourish-cream/80" />
-              </div>
-              <div className="text-4xl font-bold mb-2">{overallHealth.toFixed(0)}%</div>
-              <Progress value={overallHealth} className="bg-emerald-400" />
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white/95 backdrop-blur-sm border-flourish-sage/30 shadow-lg hover:shadow-xl transition-all duration-300">
-            <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-flourish-green/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Zap className="w-6 h-6 text-flourish-green" />
-              </div>
-              <div className="text-2xl font-bold text-flourish-forest">{stats.total_plants}</div>
-              <div className="text-sm text-flourish-dark/70 font-medium">Total Plants</div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white/95 backdrop-blur-sm border-flourish-sage/30 shadow-lg hover:shadow-xl transition-all duration-300">
-            <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-flourish-dark/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Target className="w-6 h-6 text-flourish-dark" />
-              </div>
-              <div className="text-2xl font-bold text-flourish-forest">{todaysTasks.length}</div>
-              <div className="text-sm text-flourish-dark/70 font-medium">Tasks Today</div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white/95 backdrop-blur-sm border-flourish-sage/30 shadow-lg hover:shadow-xl transition-all duration-300">
-            <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-flourish-sage/30 rounded-full flex items-center justify-center mx-auto mb-3">
-                <TrendingUp className="w-6 h-6 text-flourish-sage" />
-              </div>
-              <div className="text-2xl font-bold text-flourish-forest">{stats.streak_days}</div>
-              <div className="text-sm text-flourish-dark/70 font-medium">Day Streak</div>
-            </CardContent>
-          </Card>
-        </div>
+          {/* Main Content Area - Left (8/12) */}
+          <div className="lg:col-span-8 space-y-8">
 
-        {/* AI Insights */}
-        {aiInsights.length > 0 && (
-          <Card className="mb-8 bg-gradient-to-r from-flourish-cream to-flourish-sage/20 border-flourish-sage/30 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Brain className="w-5 h-5 text-flourish-green" />
-                <span className="text-flourish-forest font-bold">AI Insights</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {aiInsights.map((insight, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className="w-3 h-3 bg-flourish-green rounded-full mt-2 flex-shrink-0" />
-                    <p className="text-flourish-dark font-medium">{insight}</p>
-                  </div>
-                ))}
+            {/* Daily Progress & Checklist */}
+            <section className="glass-card p-6 rounded-3xl space-y-4 animate-in slide-in-from-left duration-500">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-semibold flex items-center gap-2">
+                  Daily Checklist <Trophy className="h-5 w-5 text-yellow-500" />
+                </h2>
+                <div className="text-sm font-medium text-primary">65% Progress</div>
               </div>
-            </CardContent>
-          </Card>
-        )}
+              <div className="w-full h-3 bg-secondary rounded-full overflow-hidden">
+                <div className="h-full vibrant-gradient transition-all duration-1000" style={{ width: '65%' }}></div>
+              </div>
+              <DailyChecklist tasks={schedule?.tasks || []} isLoading={scheduleLoading} />
+            </section>
 
-        {/* Tabs */}
-        <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8 bg-white/95 backdrop-blur-sm border border-flourish-sage/20 shadow-lg">
-            <TabsTrigger value="dashboard" className="flex items-center space-x-2 data-[state=active]:bg-flourish-green data-[state=active]:text-white font-medium">
-              <Sun className="w-4 h-4" /><span>Dashboard</span>
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex items-center space-x-2 data-[state=active]:bg-flourish-green data-[state=active]:text-white font-medium">
-              <Calendar className="w-4 h-4" /><span>AI Schedule</span>
-            </TabsTrigger>
-            <TabsTrigger value="assistant" className="flex items-center space-x-2 data-[state=active]:bg-flourish-green data-[state=active]:text-white font-medium">
-              <MessageSquare className="w-4 h-4" /><span>AI Assistant</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Dashboard Panel */}
-          <TabsContent value="dashboard" className="space-y-8">
-            {/* Today's Tasks */}
-            <Card className="bg-white/95 backdrop-blur-sm border-flourish-sage/30 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Clock className="w-5 h-5 text-flourish-green" />
-                  <span className="text-flourish-forest font-bold">Today's AI-Generated Tasks</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {tasksLoading ? (
-                  <p>Loading tasks…</p>
-                ) : todaysTasks.length === 0 ? (
-                  <div className="text-center py-8">
-                    <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                    <p className="text-gray-500">All tasks completed! Your plants are happy 🌱</p>
-                  </div>
+            {/* Plant Inventory */}
+            <section className="space-y-4 animate-in fade-in duration-1000">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-semibold">Your Plant Family</h2>
+                <Button variant="ghost" className="text-primary">View All</Button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {plantsLoading ? (
+                  Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-64 rounded-3xl" />)
+                ) : (plants && plants.length > 0) ? (
+                  plants.map((plant: any) => (
+                    <PlantCard key={plant.id} plant={plant} className="hover-lift" />
+                  ))
                 ) : (
-                  <div className="space-y-3">
-                    {todaysTasks.map((task: any) => (
-                      <div key={task.id} className="flex items-center justify-between p-4 bg-white/50 rounded-lg border border-emerald-100">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${
-                            task.task_type === 'watering' ? 'bg-blue-500' :
-                            task.task_type === 'fertilizing' ? 'bg-green-500' :
-                            task.task_type === 'checking' ? 'bg-purple-500' :
-                            'bg-yellow-500'
-                          }`} />
-                          <div>
-                            <span className="font-medium">{task.title}</span>
-                            <p className="text-sm text-gray-500">{task.plant_name} • {task.estimated_time}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant={task.priority === 'high' ? 'destructive' : 'outline'}>
-                            {task.priority}
-                          </Badge>
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleCompleteTask(task.id)}
-                            className="bg-emerald-500 hover:bg-emerald-600"
-                          >
-                            Complete
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="col-span-full py-12 text-center glass-card rounded-3xl italic text-muted-foreground">
+                    No plants yet. Start your journey by adding one!
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </section>
+          </div>
 
-            {/* Plants Grid */}
-            <div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-6">Your Plants</h3>
-              {dashboardLoading ? (
-                <p>Loading plants…</p>
-              ) : !dashboardData?.plants || dashboardData.plants.length === 0 ? (
-                <Card className="bg-white/70 backdrop-blur-sm border-emerald-200">
-                  <CardContent className="p-12 text-center">
-                    <div className="w-20 h-20 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Brain className="w-10 h-10 text-emerald-600" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2">Ready to start your AI-powered garden?</h3>
-                    <p className="text-gray-600 mb-6">
-                      Add your first plant and let PlantMind create a personalized care schedule with proactive monitoring!
-                    </p>
-                    <Button onClick={() => {}} className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Your First Plant
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {dashboardData.plants.map((plant: any) => (
-                    <PlantCard key={plant.id} plant={plant} />
-                  ))}
-                </div>
-              )}
+          {/* Sidebar Area - Right (4/12) */}
+          <aside className="lg:col-span-4 space-y-8 animate-in slide-in-from-right duration-500">
+            <LeaderboardPreview />
+
+            {/* Quick Stats or Tips */}
+            <div className="glass-card p-6 rounded-3xl bg-primary/5 border-primary/20">
+              <h3 className="text-lg font-bold text-primary mb-3">Botanist Tip of the Day</h3>
+              <p className="text-sm italic">
+                "Wait, is it drooping or just napping? Most Monsteras prefer to dry out slightly before the next watering check."
+              </p>
             </div>
-          </TabsContent>
-
-          {/* Calendar Panel */}
-          <TabsContent value="calendar">
-            <ScheduleCalendar />
-          </TabsContent>
-
-          {/* AI Assistant Panel */}
-          <TabsContent value="assistant">
-            <AIAssistant />
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      <AddPlantForm
-        onPlantAdded={() => {
-          refetchDashboard();
-        }}
-      />
+          </aside>
+        </div>
+      </main>
     </div>
   );
 };

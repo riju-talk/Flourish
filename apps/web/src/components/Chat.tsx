@@ -206,6 +206,9 @@ export default function Chat({ plantId }: ChatProps) {
       );
     }
 
+    return suggestions;
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();

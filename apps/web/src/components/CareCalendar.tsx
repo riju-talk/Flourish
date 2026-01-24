@@ -1,49 +1,28 @@
-// components/CareCalendar.tsx
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getCalendarEvents, getCareTasks } from '@/integrations/api';
-
-interface CareTask {
-  id: string;
-  title: string;
-  task_type: string;
-  scheduled_date: string;
-  status: string;
-  plants?: { name: string };
-}
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Droplets, FlaskConical, ClipboardCheck } from 'lucide-react';
+import { getCalendarEvents, getTodaySchedule } from '@/integrations/api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const CareCalendar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // ── Fetch calendar events ──  
-  const start = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-01`;
-  const end =   `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(
-                   new Date(currentDate.getFullYear(), currentDate.getMonth()+1, 0).getDate()
-                 ).padStart(2,'0')}`;
-
-  const { data: calendarEvents = [], isLoading: eventsLoading } = useQuery({
-    queryKey: ['calendarEvents', start, end],
-    queryFn: () => getCalendarEvents(start, end),
-    enabled: true,
-  });
-
-  // ── Fetch today’s tasks ──
-  const today = new Date().toISOString().split('T')[0];
-  const { data: todaysTasks = [], isLoading: tasksLoading } = useQuery({
-    queryKey: ['careTasks', today],
-    queryFn: () => getCareTasks({ status: 'pending' })
-      .then(tasks => tasks.filter(t => t.scheduled_date === today)),
-    enabled: true,
+  const { data: schedule, isLoading } = useQuery({
+    queryKey: ['care-schedule'],
+    queryFn: () => getTodaySchedule(),
   });
 
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
-  const monthNames = [ /* … */ ];
-  const weekDays = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const previousMonth = () =>
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -53,28 +32,24 @@ const CareCalendar: React.FC = () => {
   const renderCalendarDays = () => {
     const days = [];
     for (let i = 0; i < firstDayOfMonth; i++) {
-      days.push(<div key={`empty-${i}`} className="h-24" />);
+      days.push(<div key={`empty-${i}`} className="h-24 hidden md:block" />);
     }
     for (let day = 1; day <= daysInMonth; day++) {
-      const isToday = today === `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-      const dayTasks = calendarEvents.filter(e => e.scheduled_date === `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`);
+      const isToday = new Date().getDate() === day && new Date().getMonth() === currentDate.getMonth();
 
       days.push(
         <div
           key={day}
-          className={`h-24 p-2 border rounded-lg ${
-            isToday ? 'bg-green-100 border-green-300' : 'bg-white/50'
-          }`}
+          className={`min-h-[100px] p-3 glass-card rounded-2xl transition-all hover:bg-white/60 ${isToday ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : ''
+            }`}
         >
-          <div className={`font-semibold mb-1 ${isToday ? 'text-green-700' : 'text-gray-700'}`}>
+          <div className={`font-bold text-sm mb-2 ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
             {day}
           </div>
-          {dayTasks.map((t) => (
-            <div key={t.id} className="space-y-1">
-              <div className="w-2 h-2 bg-blue-500 rounded-full" />
-              <div className="text-xs text-gray-600 truncate">{t.title}</div>
-            </div>
-          ))}
+          {/* Calendar dots logic would go here */}
+          <div className="flex gap-1 flex-wrap">
+            {isToday && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+          </div>
         </div>
       );
     }
@@ -82,81 +57,59 @@ const CareCalendar: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="bg-white/60 backdrop-blur-sm border-green-200">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center space-x-2">
-              <CalendarIcon className="w-5 h-5 text-green-600" />
-              <span>Smart Care Calendar</span>
-            </CardTitle>
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" onClick={previousMonth}>
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="font-semibold text-lg px-4">
-                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </span>
-              <Button variant="outline" size="sm" onClick={nextMonth}>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {eventsLoading ? (
-            <p>Loading calendar…</p>
-          ) : (
-            <>
-              <div className="grid grid-cols-7 gap-2 mb-4">
-                {weekDays.map((d) => (
-                  <div key={d} className="text-center font-semibold text-gray-600 py-2">
-                    {d}
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-2">{renderCalendarDays()}</div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+    <div className="container mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-700">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
+            Care Calendar <CalendarIcon className="h-6 w-6" />
+          </h1>
+          <p className="text-muted-foreground">Keep track of your botanical duties.</p>
+        </div>
+        <div className="flex items-center gap-4 glass-card px-4 py-2 rounded-2xl">
+          <Button variant="ghost" size="icon" onClick={previousMonth} className="hover:bg-primary/10">
+            <ChevronLeft size={20} />
+          </Button>
+          <span className="font-bold text-lg min-w-[140px] text-center">
+            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+          </span>
+          <Button variant="ghost" size="icon" onClick={nextMonth} className="hover:bg-primary/10">
+            <ChevronRight size={20} />
+          </Button>
+        </div>
+      </header>
 
-      <Card className="bg-white/60 backdrop-blur-sm border-green-200">
-        <CardHeader>
-          <CardTitle>Today's Tasks</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {tasksLoading ? (
-            <p>Loading tasks…</p>
-          ) : todaysTasks.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No tasks scheduled for today!</p>
-          ) : (
-            todaysTasks.map((task) => (
-              <div
-                key={task.id}
-                className="flex items-center justify-between p-3 bg-white/50 rounded-lg"
-              >
-                <div className="flex items-center space-x-3">
-                  <div
-                    className={`w-3 h-3 rounded-full ${
-                      task.task_type === 'watering'
-                        ? 'bg-blue-500'
-                        : task.task_type === 'fertilizing'
-                        ? 'bg-green-500'
-                        : 'bg-yellow-500'
-                    }`}
-                  />
-                  <span className="font-medium">{task.title}</span>
-                  {task.plants && (
-                    <span className="text-sm text-gray-500">({task.plants.name})</span>
-                  )}
-                </div>
-                <Badge variant="outline">{task.task_type}</Badge>
+      <div className="grid grid-cols-7 gap-4">
+        {weekDays.map((d) => (
+          <div key={d} className="text-center font-bold text-xs uppercase tracking-wider text-muted-foreground mb-2">
+            {d}
+          </div>
+        ))}
+        {isLoading ? (
+          Array(28).fill(0).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)
+        ) : renderCalendarDays()}
+      </div>
+
+      <section className="glass-card p-6 rounded-3xl space-y-4">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          Upcoming for Today <ClipboardCheck className="h-5 w-5 text-primary" />
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {schedule?.tasks?.map((task: any) => (
+            <div key={task.id} className="p-4 rounded-2xl bg-white/40 border border-white/20 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                {task.task_type === 'watering' ? <Droplets className="text-blue-500" /> : <FlaskConical className="text-purple-500" />}
               </div>
-            ))
+              <div>
+                <h4 className="font-bold text-sm">{task.title}</h4>
+                <p className="text-xs text-muted-foreground">{task.plant_name}</p>
+              </div>
+            </div>
+          ))}
+          {(!schedule?.tasks || schedule.tasks.length === 0) && (
+            <p className="col-span-full py-8 text-center italic text-muted-foreground">No tasks scheduled for today.</p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 };

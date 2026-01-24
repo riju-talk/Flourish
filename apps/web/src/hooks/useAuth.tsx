@@ -1,11 +1,26 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { 
-  User as FirebaseUser, 
-  onAuthStateChanged, 
-  signInWithPopup, 
-  signOut as firebaseSignOut 
-} from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
+import { initializeApp } from "firebase/app";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+  onAuthStateChanged
+} from "firebase/auth";
+
+// Firebase configuration (Placeholder - users should provide their own)
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
 interface User {
   uid: string;
@@ -28,16 +43,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        setUser({
+        const mappedUser: User = {
           uid: firebaseUser.uid,
           email: firebaseUser.email || '',
           displayName: firebaseUser.displayName || '',
           photoURL: firebaseUser.photoURL || ''
-        });
+        };
+        setUser(mappedUser);
+        localStorage.setItem('flourish_user', JSON.stringify(mappedUser));
       } else {
         setUser(null);
+        localStorage.removeItem('flourish_user');
       }
       setLoading(false);
     });
@@ -47,9 +65,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signInWithGoogle = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      await signInWithPopup(auth, provider);
     } catch (error) {
-      console.error('Error signing in with Google:', error);
+      console.error('Error signing in:', error);
       throw error;
     }
   };
