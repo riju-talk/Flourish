@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// API base URL - use environment variable or default to localhost for backend in Replit
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+// API base URL - use environment variable or default to localhost
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Create axios instance
 const api = axios.create({
@@ -11,20 +11,30 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add Firebase auth token
 api.interceptors.request.use(
   async (config) => {
-    const storedUser = localStorage.getItem('flourish_user');
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      // In real production, you'd use auth.currentUser.getIdToken()
-      // But for this project, we'll assume the backend verifies the uid for simplicity 
-      // or we handle token refresh in a more complex setup.
-      config.headers.Authorization = `Bearer ${user.uid}`;
+    const token = localStorage.getItem('flourish_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid
+      localStorage.removeItem('flourish_token');
+      localStorage.removeItem('flourish_user');
+      window.location.href = '/auth';
+    }
     return Promise.reject(error);
   }
 );
@@ -123,6 +133,62 @@ export async function analyzeDocument(file: File) {
   return data;
 }
 
+export async function analyzeText(text: string) {
+  const { data } = await api.post('/documents/analyze-text', { text });
+  return data;
+}
+
+// ---- LEADERBOARD ----
+export async function getLeaderboard(period: 'all_time' | 'monthly' | 'weekly' = 'all_time', limit: number = 100) {
+  const { data } = await api.get(`/leaderboard/leaderboard?period=${period}&limit=${limit}`);
+  return data;
+}
+
+export async function getUserStats() {
+  const { data } = await api.get('/leaderboard/stats');
+  return data;
+}
+
+// ---- NOTIFICATIONS ----
+export async function getNotifications(unreadOnly: boolean = false, limit: number = 50) {
+  const { data } = await api.get(`/notifications/notifications?unread_only=${unreadOnly}&limit=${limit}`);
+  return data.notifications;
+}
+
+export async function markNotificationRead(notificationId: string) {
+  const { data } = await api.post(`/notifications/notifications/${notificationId}/read`);
+  return data;
+}
+
+export async function markAllNotificationsRead() {
+  const { data } = await api.post('/notifications/notifications/read-all');
+  return data;
+}
+
+export async function deleteNotification(notificationId: string) {
+  const { data } = await api.delete(`/notifications/notifications/${notificationId}`);
+  return data;
+}
+
+// ---- AGENTIC PLANT LOOKUP ----
+export async function lookupPlant(plantName: string) {
+  const { data } = await api.post('/plants/lookup', { plant_name: plantName });
+  return data;
+}
+
+// ---- MCP INTEGRATION ----
+export async function getWeatherData(lat: number, lon: number) {
+  const { data } = await api.get(`/mcp/weather/${lat}/${lon}`);
+  return data;
+}
+
+export async function getPlantInfoMCP(plantName: string) {
+  const { data } = await api.get(`/mcp/plant-info/${plantName}`);
+  return data;
+}
+
+export default api;
+
 // Get calendar events (placeholder implementation)
 export async function getCalendarEvents() {
   // This would be implemented to get calendar-style events
@@ -132,4 +198,37 @@ export async function getCalendarEvents() {
 // Get care tasks (alias for getTodayTasks)
 export async function getCareTasks() {
   return getTodayTasks();
+}
+
+// ---- STORAGE / FILE UPLOADS ----
+export async function uploadPlantImage(plantId: string, file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await api.post(`/storage/upload/plant-image/${plantId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return data;
+}
+
+export async function uploadDocument(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await api.post('/storage/upload/document', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return data;
+}
+
+export async function uploadProfilePhoto(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await api.post('/storage/upload/profile-photo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return data;
+}
+
+export async function deleteStorageFile(filePath: string) {
+  const { data } = await api.delete(`/storage/delete/${encodeURIComponent(filePath)}`);
+  return data;
 }

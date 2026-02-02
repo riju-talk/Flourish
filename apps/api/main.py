@@ -1,13 +1,13 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import plants, dashboard, chat, tasks, images, mcp, documents
+from api.routes import plants, dashboard, chat, tasks, images, mcp, documents, notifications, leaderboard, storage
 from api.core.config import settings
 from api.core.auth import verify_firebase_token
 
 # Initialize FastAPI
 app = FastAPI(
     title="Flourish",
-    description="Your Plant Care Companion",
+    description="Your Plant Care Companion with AI, Gamification & Real-time Notifications",
     version="1.0.0"
 )
 
@@ -20,6 +20,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Startup event
+@app.on_event("startup")
+async def startup_event():
+    print("🌱 Starting Flourish API...")
+    print("✅ Firebase Firestore ready!")
+    print("💡 No database setup needed - using Firebase!")
+
 # Include routers with authentication dependency
 app.include_router(plants.router, prefix="/api/plants", tags=["plants"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"], dependencies=[Depends(verify_firebase_token)])
@@ -28,14 +35,29 @@ app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"], dependenci
 app.include_router(images.router, prefix="/api/images", tags=["images"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(mcp.router, prefix="/api/mcp", tags=["mcp"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"], dependencies=[Depends(verify_firebase_token)])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"], dependencies=[Depends(verify_firebase_token)])
+app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["leaderboard"], dependencies=[Depends(verify_firebase_token)])
+app.include_router(storage.router, prefix="/api/storage", tags=["storage"], dependencies=[Depends(verify_firebase_token)])
 
 @app.get("/")
 async def root():
-    return {"message": "Flourish - Your Plant Care Companion"}
+    return {
+        "message": "🌱 Flourish - Your Plant Care Companion",
+        "version": "1.0.0",
+        "features": [
+            "Plant Inventory Management",
+            "AI-Powered Plant Care Assistant (Ollama)",
+            "Task Scheduling & Calendar",
+            "Real-time Notifications",
+            "Gamification & Leaderboard",
+            "MCP Server Integration",
+            "Document Analysis"
+        ]
+    }
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "Flourish"}
+    return {"status": "ok", "service": "Flourish API"}
 
 if __name__ == "__main__":
     import uvicorn

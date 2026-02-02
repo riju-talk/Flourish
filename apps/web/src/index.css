@@ -4,107 +4,158 @@
 
 @layer base {
   :root {
-    --background: 140 30% 98%;
-    --foreground: 140 45% 10%;
+    /* Premium "Cosmic Garden" Palette */
+    --background: 145 20% 96%;
+    /* Soft aesthetic green-white */
+    --foreground: 145 60% 10%;
+    /* Deep jungle green */
 
-    --card: 140 30% 100%;
-    --card-foreground: 140 45% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 145 60% 10%;
 
-    --popover: 140 30% 100%;
-    --popover-foreground: 140 45% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 145 60% 10%;
 
-    --primary: 142 76% 25%;
-    --primary-foreground: 140 20% 98%;
+    /* Vibrant Primary: A rich, electric emerald */
+    --primary: 150 100% 35%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 140 25% 90%;
-    --secondary-foreground: 142 76% 25%;
+    --secondary: 150 30% 90%;
+    --secondary-foreground: 150 100% 25%;
 
-    --muted: 140 10% 95%;
-    --muted-foreground: 140 10% 40%;
+    --muted: 150 20% 94%;
+    --muted-foreground: 150 10% 45%;
 
-    --accent: 142 76% 95%;
-    --accent-foreground: 142 76% 25%;
+    --accent: 150 40% 92%;
+    --accent-foreground: 150 100% 30%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 140 20% 90%;
-    --input: 140 20% 90%;
-    --ring: 142 76% 25%;
+    --border: 150 20% 90%;
+    --input: 150 20% 90%;
+    --ring: 150 100% 35%;
 
-    --radius: 1rem;
-    
-    /* Glassmorphism Tokens */
-    --glass-bg: rgba(255, 255, 255, 0.6);
-    --glass-border: rgba(255, 255, 255, 0.3);
-    --glass-blur: 12px;
+    --radius: 1.25rem;
+    /* Larger, smoother border radius */
+
+    /* Glassmorphism Configuration */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --glass-blur: 20px;
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
   }
 
   .dark {
-    --background: 220 20% 5%;
-    --foreground: 140 20% 98%;
+    --background: 220 30% 8%;
+    /* Deep space blue-black */
+    --foreground: 150 20% 98%;
 
-    --card: 220 20% 8%;
-    --card-foreground: 140 20% 98%;
+    --card: 220 25% 12%;
+    --card-foreground: 150 20% 98%;
 
-    --popover: 220 20% 8%;
-    --popover-foreground: 140 20% 98%;
+    --popover: 220 25% 12%;
+    --popover-foreground: 150 20% 98%;
 
-    --primary: 142 76% 45%;
-    --primary-foreground: 220 20% 5%;
+    --primary: 150 80% 50%;
+    /* Brighter emerald for dark mode */
+    --primary-foreground: 220 30% 8%;
 
     --secondary: 217 32% 17%;
-    --secondary-foreground: 140 20% 98%;
+    --secondary-foreground: 150 20% 98%;
 
     --muted: 217 32% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted-foreground: 215 20% 70%;
 
-    --accent: 142 76% 15%;
-    --accent-foreground: 142 76% 45%;
+    --accent: 150 60% 15%;
+    --accent-foreground: 150 80% 50%;
 
     --border: 217 32% 17%;
     --input: 217 32% 17%;
-    --ring: 142 76% 45%;
-    
-    --glass-bg: rgba(15, 20, 30, 0.6);
-    --glass-border: rgba(255, 255, 255, 0.1);
-  }
-}
+    --ring: 150 80% 50%;
 
-@layer components {
-  .glass-card {
-    @apply bg-opacity-60 backdrop-blur-lg border border-white/20 shadow-xl;
-    background: var(--glass-bg);
-    border-color: var(--glass-border);
-    backdrop-filter: blur(var(--glass-blur));
+    --glass-bg: rgba(20, 25, 40, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   }
-  
-  .vibrant-gradient {
-    background: linear-gradient(135deg, hsl(142, 76%, 25%), hsl(142, 70%, 45%));
-  }
-  
-  .hover-lift {
-    @apply transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl;
-  }
-  
-  .leaf-pulse {
-    animation: leaf-pulse 3s infinite ease-in-out;
-  }
-}
-
-@keyframes leaf-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.05); opacity: 1; }
 }
 
 @layer base {
   * {
-    @apply border-border selection:bg-primary/20;
+    @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    background-image: radial-gradient(circle at 10% 20%, rgba(34, 197, 94, 0.05) 0%, transparent 40%),
-                      radial-gradient(circle at 90% 80%, rgba(34, 197, 94, 0.05) 0%, transparent 40%);
+    @apply bg-background text-foreground antialiased selection:bg-primary/20;
+    /* Rich, subtle mesh gradient background */
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(34, 197, 94, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0) 0%, rgba(34, 197, 94, 0.03) 100%);
+    background-attachment: fixed;
+  }
+}
+
+@layer components {
+
+  /* Premium Glass Card Utility */
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    @apply rounded-3xl transition-all duration-300;
+  }
+
+  /* Interactive Hover Effect */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-primary/10;
+  }
+
+  /* Vibrant Gradient Text/Backgrounds */
+  .vibrant-gradient {
+    @apply bg-gradient-to-br from-green-500 to-emerald-700;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300;
+  }
+
+  /* Custom Animations */
+  @keyframes float {
+    0% {
+      transform: translateY(0px);
+    }
+
+    50% {
+      transform: translateY(-10px);
+    }
+
+    100% {
+      transform: translateY(0px);
+    }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes pulse-soft {
+
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 0.8;
+      transform: scale(0.98);
+    }
+  }
+
+  .leaf-pulse {
+    animation: pulse-soft 3s ease-in-out infinite;
   }
 }

@@ -1,70 +1,74 @@
 import { Link, useLocation } from "react-router-dom";
-import { Leaf, LayoutDashboard, MessageSquare, Calendar, User, Bell } from "lucide-react";
+import { Leaf, LayoutDashboard, MessageSquare, Calendar, User, Search, FileText, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import NotificationCenter from "./NotificationCenter";
 
 export const Navbar = () => {
     const { user, signOut } = useAuth();
     const location = useLocation();
 
     const navItems = [
-        { icon: <LayoutDashboard size={20} />, label: "Dashboard", path: "/" },
-        { icon: <MessageSquare size={20} />, label: "PlantMind AI", path: "/chat" },
-        { icon: <Calendar size={20} />, label: "Calendar", path: "/calendar" },
+        { icon: <LayoutDashboard size={18} />, label: "Dashboard", path: "/" },
+        { icon: <MessageSquare size={18} />, label: "AI Chat", path: "/chat" },
+        { icon: <Search size={18} />, label: "Plant Lookup", path: "/lookup" },
+        { icon: <Calendar size={18} />, label: "Calendar", path: "/calendar" },
+        { icon: <FileText size={18} />, label: "Documents", path: "/documents" },
+        { icon: <Trophy size={18} />, label: "Leaderboard", path: "/leaderboard" },
     ];
 
     return (
-        <nav className="sticky top-0 z-50 w-full border-b border-white/20 bg-white/40 backdrop-blur-md px-4 py-3">
-            <div className="container mx-auto flex items-center justify-between">
-                <Link to="/" className="flex items-center gap-2 group">
-                    <div className="w-10 h-10 rounded-2xl vibrant-gradient flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                        <Leaf size={24} />
+        <nav className="sticky top-4 z-50 w-[95%] mx-auto glass-card border-none rounded-full px-6 py-3 mt-4">
+            <div className="flex items-center justify-between">
+                <Link to="/" className="flex items-center gap-3 group">
+                    <div className="w-10 h-10 rounded-full vibrant-gradient flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                        <Leaf size={20} className="fill-current" />
                     </div>
-                    <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+                    <span className="text-xl font-bold text-gradient hidden sm:block">
                         Flourish
                     </span>
                 </Link>
 
                 {/* Desktop Nav */}
-                <div className="hidden md:flex items-center gap-8 font-medium">
-                    {navItems.map((item) => (
-                        <Link
-                            key={item.path}
-                            to={item.path}
-                            className={`flex items-center gap-2 hover:text-primary transition-colors ${location.pathname === item.path ? 'text-primary' : 'text-muted-foreground'
-                                }`}
-                        >
-                            {item.icon}
-                            {item.label}
-                        </Link>
-                    ))}
+                <div className="hidden md:flex items-center gap-1 bg-secondary/30 rounded-full p-1 border border-white/10">
+                    {navItems.map((item) => {
+                        const isActive = location.pathname === item.path;
+                        return (
+                            <Link
+                                key={item.path}
+                                to={item.path}
+                                className={`
+                                    flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300
+                                    ${isActive
+                                        ? 'bg-white shadow-sm text-primary'
+                                        : 'text-muted-foreground hover:text-primary hover:bg-white/50'}
+                                `}
+                            >
+                                {item.icon}
+                                {item.label}
+                            </Link>
+                        );
+                    })}
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <button className="relative p-2 rounded-full hover:bg-white/40 transition-colors hidden sm:block">
-                        <Bell size={20} className="text-muted-foreground" />
-                        <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-white"></span>
-                    </button>
+                    <NotificationCenter />
 
-                    <div className="flex items-center gap-3 pl-4 border-l border-white/20">
-                        <div className="hidden sm:block text-right">
-                            <p className="text-sm font-bold truncate max-w-[120px]">{user?.displayName || "Guest"}</p>
-                            <button
-                                onClick={() => signOut()}
-                                className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
-                                id="logout_btn"
-                            >
-                                Sign Out
-                            </button>
-                        </div>
-                        <div className="w-10 h-10 rounded-2xl bg-secondary border-2 border-white overflow-hidden shadow-inner">
+                    <div className="flex items-center gap-3 pl-4 border-l border-border/50">
+                        <div className="w-9 h-9 rounded-full ring-2 ring-white/50 ring-offset-2 ring-offset-transparent overflow-hidden shadow-sm">
                             {user?.photoURL ? (
-                                <img src={user.photoURL} alt="User Avatar" />
+                                <img src={user.photoURL} alt="User Avatar" className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-primary font-bold">
-                                    {user?.displayName ? user.displayName[0] : <User size={20} />}
+                                <div className="w-full h-full bg-secondary flex items-center justify-center text-primary font-bold">
+                                    {user?.displayName ? user.displayName[0] : <User size={18} />}
                                 </div>
                             )}
                         </div>
+                        <button
+                            onClick={() => signOut()}
+                            className="text-xs font-semibold text-muted-foreground hover:text-destructive transition-colors hidden sm:block"
+                        >
+                            Sign Out
+                        </button>
                     </div>
                 </div>
             </div>

@@ -2,7 +2,9 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any, Optional
 from ..models.chat import ChatMessage, ChatResponse, ImageAnalysis
 from ..services.ai_service import AIService
+from ..services.ollama_service import OllamaService
 from ..services.weather_service import WeatherService
+from ..services.plant_service import PlantService
 from ..core.auth import verify_firebase_token
 
 router = APIRouter()
@@ -10,19 +12,25 @@ router = APIRouter()
 @router.post("/", response_model=ChatResponse)
 async def chat_with_ai(
     messages: List[ChatMessage],
+    context: Optional[str] = None,
     user_id: str = Depends(verify_firebase_token)
 ):
-    """Enhanced multi-modal chat with PlantMind AI"""
+    """
+    Enhanced multi-modal chat with Ollama LLM
+    Supports context-aware plant care conversations
+    """
     try:
-        # Extract location from messages if provided for weather integration
-        context = {}
-        for msg in messages:
-            if "location" in msg.content.lower() or "weather" in msg.content.lower():
-                # In a real app, you'd extract coordinates from user location
-                # For now, we'll use default weather data
-                context["weather_requested"] = True
-
-        response = await AIService.chat_with_ai(messages, context)
+        # Build context from MCP if needed
+        mcp_context = None
+        last_message = messages[-1].content.lower() if messages else ""
+        
+        # Check if weather context is needed
+        if "weather" in last_message or "climate" in last_message:
+            # Could fetch weather data and add to context
+            mcp_context = "Current conditions: Use the MCP weather API for real-time data."
+        
+        # Use Ollama for chat
+        response = await OllamaService.chat_with_ai(messages, context=mcp_context or context)
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

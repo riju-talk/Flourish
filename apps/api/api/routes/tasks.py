@@ -1,82 +1,149 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from datetime import datetime, date
 from ..models.task import CareTask
+from ..core.auth import verify_firebase_token
+from ..db.firestore import FirestoreDB
+from ..routes.leaderboard import update_user_score
 
 router = APIRouter()
 
-# In-memory storage (replace with database later)
-tasks_db = {}
-
-@router.get("/today", response_model=dict)
-async def get_today_tasks():
-    """Get today's AI-generated tasks"""
+@router.get("/today")
+async def get_today_tasks(user_id: str = Depends(verify_firebase_token)):
+    """Get today's tasks"""
     try:
         today = date.today()
         
+        # Get all incomplete tasks for the user
+        tasks = await FirestoreDB.get_user_tasks(user_id, completed=False)
+        
         # Filter tasks for today
         today_tasks = []
-        for task_list in tasks_db.values():
-            for task in task_list:
-                if task.scheduled_date.date() == today and task.status == "pending":
+        for task in tasks:
+            due_date = task.get("due_date")
+            if due_date:
+                # Handle both datetime objects and ISO strings
+                if isinstance(due_date, str):
+                    task_date = datetime.fromisoformat(due_date.replace('Z', '+00:00')).date()
+                else:
+                    task_date = due_date.date() if hasattr(due_date, 'date') else due_date
+                
+                if task_date == today:
                     today_tasks.append(task)
         
         # Sort by priority
         priority_order = {"high": 0, "medium": 1, "low": 2}
-        today_tasks.sort(key=lambda x: priority_order.get(x.priority, 3))
+        today_tasks.sort(key=lambda x: priority_order.get(x.get("priority", "medium"), 3))
         
-        return {"tasks": today_tasks, "date": today}
+        return {"tasks": today_tasks, "date": today.isoformat()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{task_id}/complete")
-async def complete_task(task_id: str, notes: str = None):
-    """Mark task as completed"""
+async def complete_task(
+    task_id: str,
+    notes: str = None,
+    user_id: str = Depends(verify_firebase_token)
+):
+    """Mark task as completed and award points"""
     try:
-        # Find and update task
-        task_found = False
-        for plant_id, task_list in tasks_db.items():
-            for task in task_list:
-                if task.id == task_id:
-                    task.status = "completed"
-                    task.completed_date = datetime.now()
-                    task_found = True
-                    break
-            if task_found:
-                break
-        
-        if not task_found:
+        # Get task
+        task = await FirestoreDB.get_task(task_id)
+        if not task:
             raise HTTPException(status_code=404, detail="Task not found")
         
+        # Verify ownership
+        if task.get("user_id") != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        
+        # Update task
+        updates = {
+            "completed": True,
+            "completed_at": datetime.now().isoformat(),
+            "notes": notes
+        }
+        await FirestoreDB.update_task(task_id, updates)
+        
+        # Award points
+        points = task.get("points", 10)
+        await update_user_score(user_id, points)
+        
+        # Create notification
+        await FirestoreDB.create_notification({
+            "user_id": user_id,
+            "type": "task_completed",
+            "title": "Task Completed!",
+            "message": f"You earned {points} points for completing: {task.get('title')}",
+            "read": False
+        })
+        
         return {
-            "task_id": task_id,
-            "completed_at": datetime.now(),
-            "notes": notes,
-            "message": "Task completed successfully"
+            "success": True,
+            "task": task,
+            "points_earned": points
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/generate/{plant_id}")
-async def generate_tasks_for_plant(plant_id: str):
-    """Generate care tasks for a specific plant"""
+@router.get("/")
+async def get_user_tasks(
+    completed: bool = None,
+    user_id: str = Depends(verify_firebase_token)
+):
+    """Get all tasks for user"""
     try:
-        from .plants import plants_db
-        from ..services.plant_service import PlantService
+        tasks = await FirestoreDB.get_user_tasks(user_id, completed=completed)
+        return tasks
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/")
+async def create_task(
+    task_data: dict,
+    user_id: str = Depends(verify_firebase_token)
+):
+    """Create a new task"""
+    try:
+        task_data["user_id"] = user_id
+        task_data.setdefault("completed", False)
+        task_data.setdefault("points", 10)
         
-        if plant_id not in plants_db:
-            raise HTTPException(status_code=404, detail="Plant not found")
+        task = await FirestoreDB.create_task(task_data)
+        return task
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/{task_id}")
+async def update_task(
+    task_id: str,
+    task_updates: dict,
+    user_id: str = Depends(verify_firebase_token)
+):
+    """Update a task"""
+    try:
+        # Verify ownership
+        task = await FirestoreDB.get_task(task_id)
+        if not task or task.get("user_id") != user_id:
+            raise HTTPException(status_code=404, detail="Task not found")
         
-        plant = plants_db[plant_id]
-        tasks = await PlantService.generate_care_schedule(plant)
+        await FirestoreDB.update_task(task_id, task_updates)
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{task_id}")
+async def delete_task(
+    task_id: str,
+    user_id: str = Depends(verify_firebase_token)
+):
+    """Delete a task"""
+    try:
+        # Verify ownership
+        task = await FirestoreDB.get_task(task_id)
+        if not task or task.get("user_id") != user_id:
+            raise HTTPException(status_code=404, detail="Task not found")
         
-        # Store tasks
-        tasks_db[plant_id] = tasks
-        
-        return {
-            "plant_id": plant_id,
-            "tasks": tasks,
-            "message": f"Generated {len(tasks)} care tasks"
-        }
+        await FirestoreDB.delete_task(task_id)
+        return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

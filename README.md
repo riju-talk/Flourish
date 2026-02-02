@@ -5,6 +5,17 @@
 
 ---
 
+## 🔥 **Firebase Integration Complete!**
+
+✅ **Firebase Authentication** (Google Sign-In)  
+✅ **Cloud Firestore Database** (Real-time sync)  
+✅ **Firebase Storage** (File uploads)  
+✅ **Production Ready** (Security & documentation)
+
+**→ [Architecture Documentation](ARCHITECTURE.md)**
+
+---
+
 ## 🌿 Why Flourish?
 
 Most plant care apps are glorified reminders that treat every plant the same. **Flourish is different.**
@@ -73,6 +84,68 @@ Flourish is built with modern, reliable technologies to ensure fast performance 
 
 ---
 
+## � Quick Start
+
+### Prerequisites
+- **Python 3.9+** - [Download](https://www.python.org/downloads/)
+- **Node.js 18+** - [Download](https://nodejs.org/)
+- **Firebase Account** - Project: `flourish-de908` (already configured)
+
+### One-Command Start (Windows)
+```bash
+# Using batch file (recommended)
+start.bat
+
+# Or using PowerShell
+.\start.ps1
+```
+
+This automated script will:
+- ✅ Check all dependencies
+- ✅ Install missing packages
+- ✅ Start backend API on port 8000
+- ✅ Start frontend on port 5173
+- ✅ Open the app in your browser
+
+### Manual Start
+
+**Backend:**
+```bash
+cd apps/api
+pip install -r requirements.txt
+python -m uvicorn main:app --reload
+```
+
+**Frontend:**
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+**Access:**
+- 🌐 Frontend: http://localhost:5173
+- ⚙️ Backend: http://localhost:8000
+- 📚 API Docs: http://localhost:8000/docs
+
+### First Time Setup
+
+1. **Firebase Configuration**
+   - Service account key is already configured at `apps/api/firebase-service-account.json`
+   - Environment variables are set in `.env` files
+
+2. **Sign In**
+   - Go to http://localhost:5173
+   - Click "Sign in with Google"
+   - Start managing your plants! 🌱
+
+3. **Optional: AI Features**
+   - Install [Ollama](https://ollama.ai) for local AI
+   - Run: `ollama pull llama3`
+   - Or use Groq API (add `GROQ_API_KEY` to `apps/api/.env`)
+
+---
+
 ## 🔥 Tech Stack
 
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=white)
@@ -83,6 +156,59 @@ Flourish is built with modern, reliable technologies to ensure fast performance 
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)
 ![Groq](https://img.shields.io/badge/Groq-00A0FF?style=for-the-badge&logo=groq&logoColor=white)
+
+---
+
+## 📂 Project Structure
+
+```
+Flourish/
+├── apps/
+│   ├── api/                    # Backend (FastAPI + Python)
+│   │   ├── api/
+│   │   │   ├── core/          # Auth & config
+│   │   │   ├── db/            # Firestore & Storage
+│   │   │   ├── routes/        # API endpoints
+│   │   │   └── services/      # Business logic
+│   │   ├── main.py            # API entry point
+│   │   └── requirements.txt   # Python dependencies
+│   └── web/                   # Frontend (React + TypeScript)
+│       ├── src/
+│       │   ├── components/    # React components
+│       │   ├── hooks/         # Custom hooks (useAuth)
+│       │   ├── lib/           # Firebase & utilities
+│       │   ├── pages/         # App pages
+│       │   └── integrations/  # API client
+│       └── package.json       # Node dependencies
+├── ARCHITECTURE.md            # System architecture docs
+├── README.md                  # This file
+└── start.ps1                  # Development start script
+```
+
+---
+
+## 🔐 Firebase Services
+
+This project uses **Firebase** for all backend services:
+
+### Authentication
+- Google Sign-In provider
+- JWT token-based API security
+- Automatic session management
+
+### Database (Firestore)
+- **profiles** - User profiles & gamification
+- **plants** - Plant inventory
+- **care_tasks** - Scheduled tasks
+- **notifications** - Real-time alerts
+- **health_checks** - Plant health tracking
+
+### Storage
+- Plant images: `users/{userId}/plants/{plantId}/`
+- Documents: `users/{userId}/documents/`
+- Profile photos: `users/{userId}/profile/`
+
+**Firebase Console:** https://console.firebase.google.com/project/flourish-de908
 
 ---
 

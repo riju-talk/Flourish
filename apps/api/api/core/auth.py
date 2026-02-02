@@ -8,7 +8,9 @@ from firebase_admin import credentials, auth
 # Initialize Firebase Admin SDK if not already initialized
 if not firebase_admin._apps:
     cred = credentials.Certificate(os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY"))
-    firebase_admin.initialize_app(cred)
+    firebase_admin.initialize_app(cred, {
+        'storageBucket': 'flourish-de908.firebasestorage.app'
+    })
 
 security = HTTPBearer()
 

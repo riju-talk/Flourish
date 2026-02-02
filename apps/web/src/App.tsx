@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +9,9 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Chat from "./pages/Chat";
 import CalendarPage from "./pages/Calendar";
+import LeaderboardPage from "./pages/Leaderboard";
+import PlantLookupPage from "./pages/PlantLookup";
+import DocumentsPage from "./pages/Documents";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -91,6 +93,30 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <CalendarPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/leaderboard"
+                element={
+                  <ProtectedRoute>
+                    <LeaderboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/lookup"
+                element={
+                  <ProtectedRoute>
+                    <PlantLookupPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/documents"
+                element={
+                  <ProtectedRoute>
+                    <DocumentsPage />
                   </ProtectedRoute>
                 }
               />

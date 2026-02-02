@@ -4,7 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Leaf, Send, Bot, User, Sparkles, Paperclip, FileText } from "lucide-react";
+import { Send, Bot, User, Sparkles, Paperclip } from "lucide-react";
 import { chatWithAI, analyzeDocument } from "@/integrations/api";
 import ReactMarkdown from "react-markdown";
 
@@ -77,46 +77,66 @@ const Chat = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-transparent flex flex-col pb-6">
       <Navbar />
 
-      <main className="flex-1 container mx-auto max-w-4xl p-4 md:p-8 flex flex-col gap-6">
-        <header className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
-            PlantMind AI <Sparkles className="h-5 w-5 text-yellow-500 leaf-pulse" />
-          </h1>
-          <div className="text-sm font-medium px-3 py-1 bg-primary/10 rounded-full text-primary">
-            Powered by Ollama
+      <main className="flex-1 container mx-auto max-w-5xl p-4 md:p-8 flex flex-col gap-6 h-[calc(100vh-100px)]">
+        <header className="flex items-center justify-between animate-in slide-in-from-top-5 duration-500">
+          <div className="glass-card px-6 py-3 rounded-full flex items-center gap-3">
+            <div className="bg-primary/10 p-2 rounded-full">
+              <Sparkles className="h-5 w-5 text-primary leaf-pulse" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-foreground">PlantMind AI</h1>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                <span className="text-xs text-muted-foreground font-medium">Online & Ready</span>
+              </div>
+            </div>
           </div>
         </header>
 
         {/* Chat Area */}
-        <section className="flex-1 glass-card rounded-3xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-500">
-          <ScrollArea className="flex-1 p-6" ref={scrollRef}>
-            <div className="space-y-6 pb-4">
+        <section className="flex-1 glass-card rounded-[2.5rem] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-500 shadow-2xl relative">
+          {/* Background Decor */}
+          <div className="absolute inset-0 opacity-30 pointer-events-none bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent"></div>
+
+          <ScrollArea className="flex-1 p-6 md:p-10" ref={scrollRef}>
+            <div className="space-y-8 pb-4">
               {messages.map((msg, i) => (
-                <div key={i} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${msg.role === 'assistant' ? 'vibrant-gradient text-white' : 'bg-secondary'
+                <div key={i} className={`flex gap-5 ${msg.role === 'user' ? 'flex-row-reverse' : ''} animate-in slide-in-from-bottom-2 duration-300`}>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-md ${msg.role === 'assistant'
+                      ? 'vibrant-gradient text-white ring-4 ring-white/20'
+                      : 'bg-white text-muted-foreground ring-4 ring-black/5'
                     }`}>
-                    {msg.role === 'assistant' ? <Bot size={20} /> : <User size={20} />}
+                    {msg.role === 'assistant' ? <Bot size={24} /> : <User size={24} />}
                   </div>
 
-                  <div className="flex flex-col gap-3 max-w-[80%]">
-                    <div className={`p-4 rounded-3xl text-sm leading-relaxed ${msg.role === 'assistant'
-                      ? 'bg-white/50 border border-white/20'
-                      : 'vibrant-gradient text-white'
+                  <div className="flex flex-col gap-3 max-w-[85%] md:max-w-[75%]">
+                    <div className={`p-6 rounded-[2rem] text-[15px] leading-relaxed shadow-sm ${msg.role === 'assistant'
+                        ? 'bg-white/80 backdrop-blur-md border border-white/50 rounded-tl-none'
+                        : 'vibrant-gradient text-white rounded-tr-none'
                       }`}>
-                      <ReactMarkdown className="markdown-content">{msg.content}</ReactMarkdown>
+                      <ReactMarkdown
+                        className={`markdown-content ${msg.role === 'user' ? 'text-white' : 'text-foreground'}`}
+                        components={{
+                          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                          ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                          strong: ({ children }) => <strong className="font-bold">{children}</strong>
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
                     </div>
 
                     {/* Follow-up Suggestions */}
                     {msg.suggestions && msg.role === 'assistant' && (
-                      <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom duration-700">
+                      <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom duration-700 ml-2">
                         {msg.suggestions.map((suggestion, j) => (
                           <button
                             key={j}
                             onClick={() => { setInput(suggestion); }}
-                            className="text-xs px-3 py-1.5 rounded-full border border-primary/20 bg-white/30 hover:bg-primary/10 transition-colors"
+                            className="text-xs px-4 py-2 rounded-full border border-primary/20 bg-white/40 hover:bg-primary hover:text-white transition-all duration-300 hover:scale-105"
                           >
                             {suggestion}
                           </button>
@@ -126,36 +146,53 @@ const Chat = () => {
                   </div>
                 </div>
               ))}
+
               {chatMutation.isPending && (
-                <div className="flex gap-4 animate-pulse">
-                  <div className="w-10 h-10 rounded-2xl vibrant-gradient opacity-50 flex items-center justify-center">
-                    <Bot size={20} className="text-white" />
+                <div className="flex gap-5 animate-pulse">
+                  <div className="w-12 h-12 rounded-full vibrant-gradient opacity-50 flex items-center justify-center">
+                    <Bot size={24} className="text-white" />
                   </div>
-                  <div className="p-4 rounded-3xl bg-secondary/50 w-32 h-10"></div>
+                  <div className="p-6 rounded-[2rem] bg-white/40 w-48 h-20 flex items-center gap-1 rounded-tl-none">
+                    <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce delay-0"></span>
+                    <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce delay-150"></span>
+                    <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce delay-300"></span>
+                  </div>
                 </div>
               )}
             </div>
           </ScrollArea>
 
           {/* Input Area */}
-          <div className="p-4 bg-white/30 border-t border-white/20">
-            <div className="relative">
+          <div className="p-6 bg-white/40 backdrop-blur-xl border-t border-white/20">
+            <div className="relative flex gap-3 max-w-4xl mx-auto">
+              <Button variant="outline" size="icon" className="h-14 w-14 rounded-2xl border-white/40 hover:bg-white/60 bg-white/20 shrink-0" onClick={() => fileInputRef.current?.click()}>
+                <Paperclip size={20} className="text-muted-foreground" />
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".pdf,.png,.jpg,.jpeg"
+                onChange={handleFileUpload}
+              />
+
               <Input
-                placeholder="Ask Ollama about your plants..."
+                placeholder="Ask PlantMind about your plants..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                className="rounded-2xl pr-12 h-14 bg-white/50 border-white/30 focus:ring-primary"
+                className="rounded-2xl pr-4 h-14 bg-white/60 border-white/40 focus:ring-primary/50 text-base shadow-inner"
               />
               <Button
                 size="icon"
                 onClick={handleSend}
-                disabled={chatMutation.isPending}
-                className="absolute right-2 top-2 h-10 w-10 rounded-xl bg-primary hover:vibrant-gradient text-white"
+                disabled={chatMutation.isPending || !input.trim()}
+                className={`absolute right-2 top-2 h-10 w-10 rounded-xl transition-all duration-300 ${input.trim() ? 'vibrant-gradient hover:scale-105' : 'bg-muted text-muted-foreground'}`}
               >
                 <Send size={18} />
               </Button>
             </div>
+            {analyzing && <p className="text-xs text-center mt-2 text-primary animate-pulse">Analyzing document...</p>}
           </div>
         </section>
       </main>
