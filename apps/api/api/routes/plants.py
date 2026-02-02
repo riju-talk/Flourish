@@ -121,12 +121,12 @@ async def create_plant(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create plant: {str(e)}")
 
-@router.get("/", response_model=List[Plant])
+@router.get("/")
 async def get_plants(user_id: str = Depends(verify_firebase_token)):
     """Get all plants for user"""
     try:
         plants = await FirestoreDB.get_user_plants(user_id)
-        return plants
+        return {"plants": plants}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get plants: {str(e)}")
 

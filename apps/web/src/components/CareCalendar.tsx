@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Droplets, FlaskConical, ClipboardCheck } from 'lucide-react';
-import { getCalendarEvents, getTodaySchedule } from '@/integrations/api';
+import { getCalendarEvents, getTodayTasks } from '@/integrations/api';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const CareCalendar: React.FC = () => {
@@ -12,7 +12,7 @@ const CareCalendar: React.FC = () => {
 
   const { data: schedule, isLoading } = useQuery({
     queryKey: ['care-schedule'],
-    queryFn: () => getTodaySchedule(),
+    queryFn: () => getTodayTasks(),
   });
 
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();

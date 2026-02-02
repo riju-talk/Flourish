@@ -99,13 +99,13 @@ async def get_leaderboard(
     user_id: str = Depends(verify_firebase_token)
 ):
     """
-    Get leaderboard showing top users by points/tasks completed
+    Get leaderboard showing top 100 users by points/tasks completed
     Note: For simplicity, Firebase version shows all-time leaderboard
     Period filtering requires additional task tracking
     """
     try:
-        # Get leaderboard
-        leaderboard = await FirestoreDB.get_leaderboard(limit)
+        # Get top 100 users for leaderboard
+        leaderboard = await FirestoreDB.get_leaderboard(100)
         
         # Add rank numbers
         for i, entry in enumerate(leaderboard, 1):

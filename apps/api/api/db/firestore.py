@@ -26,32 +26,45 @@ class FirestoreDB:
     @staticmethod
     async def get_profile(user_id: str) -> Optional[Dict]:
         """Get user profile"""
-        doc = db.collection(PROFILES_COLLECTION).document(user_id).get()
-        if doc.exists:
-            data = doc.to_dict()
-            data['id'] = doc.id
-            return data
-        return None
+        try:
+            doc = db.collection(PROFILES_COLLECTION).document(user_id).get()
+            if doc.exists:
+                data = doc.to_dict()
+                data['id'] = doc.id
+                print(f"📖 Found profile for {user_id}")
+                return data
+            print(f"❌ No profile found for {user_id}")
+            return None
+        except Exception as e:
+            print(f"❌ Error getting profile for {user_id}: {e}")
+            return None
     
     @staticmethod
     async def create_profile(user_id: str, email: str, display_name: str = "", photo_url: str = "") -> Dict:
         """Create user profile"""
-        profile_data = {
-            "email": email,
-            "display_name": display_name,
-            "photo_url": photo_url,
-            "total_score": 0,
-            "level": 1,
-            "tasks_completed": 0,
-            "streak_days": 0,
-            "last_activity": None,
-            "achievements": [],
-            "created_at": firestore.SERVER_TIMESTAMP,
-            "updated_at": firestore.SERVER_TIMESTAMP
-        }
-        db.collection(PROFILES_COLLECTION).document(user_id).set(profile_data)
-        profile_data['id'] = user_id
-        return profile_data
+        try:
+            profile_data = {
+                "email": email,
+                "display_name": display_name,
+                "photo_url": photo_url,
+                "total_score": 0,
+                "level": 1,
+                "tasks_completed": 0,
+                "streak_days": 0,
+                "last_activity": None,
+                "achievements": [],
+                "created_at": firestore.SERVER_TIMESTAMP,
+                "updated_at": firestore.SERVER_TIMESTAMP
+            }
+            print(f"💾 Creating profile in Firestore for {user_id}")
+            print(f"📝 Profile data: {profile_data}")
+            db.collection(PROFILES_COLLECTION).document(user_id).set(profile_data)
+            profile_data['id'] = user_id
+            print(f"✅ Profile created successfully in collection: {PROFILES_COLLECTION}")
+            return profile_data
+        except Exception as e:
+            print(f"❌ Error creating profile for {user_id}: {e}")
+            raise
     
     @staticmethod
     async def update_profile(user_id: str, updates: Dict) -> None:
@@ -62,9 +75,14 @@ class FirestoreDB:
     @staticmethod
     async def get_or_create_profile(user_id: str, email: str, display_name: str = "", photo_url: str = "") -> Dict:
         """Get existing profile or create new one"""
+        print(f"🔍 Checking profile for user: {user_id}")
         profile = await FirestoreDB.get_profile(user_id)
         if not profile:
+            print(f"✨ Creating new profile for user: {user_id}")
             profile = await FirestoreDB.create_profile(user_id, email, display_name, photo_url)
+            print(f"✅ Profile created: {profile}")
+        else:
+            print(f"✅ Profile exists: {profile}")
         return profile
     
     # ============ PLANTS ============

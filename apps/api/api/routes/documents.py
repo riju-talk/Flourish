@@ -4,7 +4,13 @@ from ..core.auth import verify_firebase_token
 import PyPDF2
 import io
 from PIL import Image
-import pytesseract
+
+# Optional OCR support
+try:
+    import pytesseract
+    PYTESSERACT_AVAILABLE = True
+except ImportError:
+    PYTESSERACT_AVAILABLE = False
 
 router = APIRouter()
 

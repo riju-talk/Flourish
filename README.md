@@ -107,7 +107,46 @@ This automated script will:
 - ✅ Start frontend on port 5173
 - ✅ Open the app in your browser
 
-### Manual Start
+### NPM Scripts (Monorepo Management)
+
+**Development (runs both services):**
+```bash
+npm run dev              # Start both API and web in watch mode
+npm run dev:api          # Start API only (port 8000)
+npm run dev:web          # Start web only (port 5173)
+```
+
+**Production:**
+```bash
+npm run build            # Build both services
+npm run build:api        # Build API Docker image
+npm run build:web        # Build web for production
+npm start                # Start both services in production mode
+```
+
+**Testing:**
+```bash
+npm test                 # Run all tests (frontend + backend)
+npm run test:api         # Run backend tests (pytest)
+npm run test:web         # Run frontend tests (vitest)
+npm run test:watch       # Run frontend tests in watch mode
+npm run test:ui          # Open vitest UI
+```
+
+**Maintenance:**
+```bash
+npm run lint             # Lint all workspaces
+npm run clean            # Clean all build artifacts
+npm run install:all      # Install all dependencies
+npm run typecheck        # TypeScript type checking
+```
+
+**Access:**
+- 🌐 Frontend: http://localhost:5173
+- ⚙️ Backend: http://localhost:8000
+- 📚 API Docs: http://localhost:8000/docs
+
+### Manual Start (Alternative)
 
 **Backend:**
 ```bash
@@ -122,11 +161,6 @@ cd apps/web
 npm install
 npm run dev
 ```
-
-**Access:**
-- 🌐 Frontend: http://localhost:5173
-- ⚙️ Backend: http://localhost:8000
-- 📚 API Docs: http://localhost:8000/docs
 
 ### First Time Setup
 

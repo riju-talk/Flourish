@@ -1,15 +1,17 @@
 import os
-from typing import List
-from pydantic_settings import BaseSettings
+from typing import List, Union
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    
     # API Settings
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Flourish - Plant Care Companion"
     
-    # CORS Settings
-    ALLOWED_ORIGINS: List[str] = [
+    # CORS Settings - can be a string or list
+    ALLOWED_ORIGINS: Union[str, List[str]] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5000",
@@ -24,7 +26,8 @@ class Settings(BaseSettings):
     @classmethod
     def parse_origins(cls, v):
         if isinstance(v, str):
-            return [origin.strip() for origin in v.split(',')]
+            # Split by comma and strip whitespace
+            return [origin.strip() for origin in v.split(',') if origin.strip()]
         return v
     
     # AI Settings
@@ -46,8 +49,5 @@ class Settings(BaseSettings):
     
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "change-this-secret-key-in-production")
-    
-    class Config:
-        env_file = ".env"
 
 settings = Settings()

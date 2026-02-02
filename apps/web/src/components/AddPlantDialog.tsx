@@ -49,11 +49,16 @@ const AddPlantDialog: React.FC<AddPlantDialogProps> = ({ open, onOpenChange, onA
     e.preventDefault();
     if (formData.name && formData.type && formData.location && formData.sunlight) {
       onAddPlant({
-        ...formData,
-        image: formData.image || plantImages[Math.floor(Math.random() * plantImages.length)],
-        lastWatered: "Today",
-        nextWatering: "In 3 days",
-        health: "Healthy"
+        name: formData.name,
+        species: formData.type,
+        location: formData.location,
+        sunlight_requirement: formData.sunlight,
+        image_url: formData.image || plantImages[Math.floor(Math.random() * plantImages.length)],
+        plant_type: formData.type.toLowerCase().includes('indoor') ? 'indoor' : formData.type.toLowerCase().includes('outdoor') ? 'outdoor' : 'both',
+        watering_frequency_days: 7,
+        fertilizing_frequency_days: 30,
+        pruning_frequency_days: 90,
+        health_status: "healthy"
       });
       setFormData({ name: '', type: '', location: '', sunlight: '', image: '' });
     }
@@ -130,4 +135,5 @@ const AddPlantDialog: React.FC<AddPlantDialogProps> = ({ open, onOpenChange, onA
   );
 };
 
+export { AddPlantDialog };
 export default AddPlantDialog;

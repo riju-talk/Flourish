@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 // API base URL - use environment variable or default to localhost
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// Always append /api to the base URL for API routes
+const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api`;
 
 // Create axios instance
 const api = axios.create({
@@ -70,15 +71,11 @@ export async function completeCareTask(plantId: string, scheduleId: string, note
   return data;
 }
 
-export async function getTodaySchedule() {
-  const { data } = await api.get('/plants/calendar/today');
-  return data;
-}
-
-export async function getWeekSchedule() {
-  const { data } = await api.get('/plants/calendar/week');
-  return data;
-}
+// Calendar endpoints don't exist - use tasks/today instead
+// export async function getTodaySchedule() {
+//   const { data } = await api.get('/tasks/today');
+//   return data;
+// }
 
 // ---- DASHBOARD ----
 export async function getDashboardData() {
@@ -151,22 +148,22 @@ export async function getUserStats() {
 
 // ---- NOTIFICATIONS ----
 export async function getNotifications(unreadOnly: boolean = false, limit: number = 50) {
-  const { data } = await api.get(`/notifications/notifications?unread_only=${unreadOnly}&limit=${limit}`);
+  const { data } = await api.get(`/notifications/?unread_only=${unreadOnly}&limit=${limit}`);
   return data.notifications;
 }
 
 export async function markNotificationRead(notificationId: string) {
-  const { data } = await api.post(`/notifications/notifications/${notificationId}/read`);
+  const { data } = await api.put(`/notifications/${notificationId}/read`);
   return data;
 }
 
 export async function markAllNotificationsRead() {
-  const { data } = await api.post('/notifications/notifications/read-all');
+  const { data } = await api.put('/notifications/mark-all-read');
   return data;
 }
 
 export async function deleteNotification(notificationId: string) {
-  const { data } = await api.delete(`/notifications/notifications/${notificationId}`);
+  const { data } = await api.delete(`/notifications/${notificationId}`);
   return data;
 }
 

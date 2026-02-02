@@ -31,60 +31,15 @@ export default function NotificationCenter() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [ws, setWs] = useState<WebSocket | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchNotifications();
-      connectWebSocket();
+      // Poll for notifications every 30 seconds
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
     }
-
-    return () => {
-      if (ws) {
-        ws.close();
-      }
-    };
   }, [user]);
-
-  const connectWebSocket = () => {
-    if (!user) return;
-
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
-    const websocket = new WebSocket(`${wsUrl}/api/notifications/ws/${user.uid}`);
-
-    websocket.onopen = () => {
-      console.log('WebSocket connected');
-    };
-
-    websocket.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      if (message.type === 'notification') {
-        // Add new notification to the list
-        setNotifications(prev => [message.data, ...prev]);
-        setUnreadCount(prev => prev + 1);
-        
-        // Show browser notification
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification(message.data.title, {
-            body: message.data.message,
-            icon: '/logo.png',
-          });
-        }
-      }
-    };
-
-    websocket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    websocket.onclose = () => {
-      console.log('WebSocket disconnected');
-      // Reconnect after 5 seconds
-      setTimeout(connectWebSocket, 5000);
-    };
-
-    setWs(websocket);
-  };
 
   const fetchNotifications = async () => {
     try {
@@ -92,7 +47,7 @@ export default function NotificationCenter() {
       setNotifications(data);
       setUnreadCount(data.filter((n: Notification) => !n.read).length);
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      // Silently fail - notifications are not critical
     }
   };
 

@@ -1,15 +1,23 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { PlantCard } from "@/components/PlantCard";
 import { DailyChecklist } from "@/components/DailyChecklist";
 import { LeaderboardPreview } from "@/components/LeaderboardPreview";
+import { AddPlantDialog } from "@/components/AddPlantDialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Leaf, Calendar as CalendarIcon, Trophy, Sparkles } from "lucide-react";
-import { getPlants, getTodaySchedule } from "@/integrations/api";
+import { getPlants, getTodayTasks, createPlant } from "@/integrations/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isAddPlantOpen, setIsAddPlantOpen] = useState(false);
+  
   const { data: plants, isLoading: plantsLoading } = useQuery({
     queryKey: ["plants"],
     queryFn: getPlants,
@@ -17,12 +25,33 @@ const Index = () => {
 
   const { data: schedule, isLoading: scheduleLoading } = useQuery({
     queryKey: ["today-schedule"],
-    queryFn: getTodaySchedule,
+    queryFn: getTodayTasks,
   });
+
+  const addPlantMutation = useMutation({
+    mutationFn: createPlant,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["plants"] });
+      setIsAddPlantOpen(false);
+      console.log("Plant added successfully!");
+    },
+    onError: (error) => {
+      console.error("Failed to add plant:", error);
+    },
+  });
+
+  const handleAddPlant = (plantData: any) => {
+    addPlantMutation.mutate(plantData);
+  };
 
   return (
     <div className="min-h-screen bg-transparent pb-12">
       <Navbar />
+      <AddPlantDialog 
+        open={isAddPlantOpen} 
+        onOpenChange={setIsAddPlantOpen}
+        onAddPlant={handleAddPlant}
+      />
 
       <main className="container mx-auto px-4 py-8 space-y-10">
         {/* Hero / Header Section */}
@@ -42,10 +71,17 @@ const Index = () => {
           </div>
 
           <div className="flex gap-3">
-            <Button className="vibrant-gradient hover-lift text-white rounded-full px-6 h-12 shadow-lg shadow-primary/20">
+            <Button 
+              className="vibrant-gradient hover-lift text-white rounded-full px-6 h-12 shadow-lg shadow-primary/20"
+              onClick={() => setIsAddPlantOpen(true)}
+            >
               <Plus className="mr-2 h-5 w-5" /> Add New Plant
             </Button>
-            <Button variant="outline" className="rounded-full glass-card hover-lift h-12 border-white/20">
+            <Button 
+              variant="outline" 
+              className="rounded-full glass-card hover-lift h-12 border-white/20"
+              onClick={() => navigate('/calendar')}
+            >
               <CalendarIcon className="mr-2 h-5 w-5 text-muted-foreground" /> View Calendar
             </Button>
           </div>
@@ -90,17 +126,25 @@ const Index = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {plantsLoading ? (
                   Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-64 rounded-xl bg-white/20" />)
-                ) : (plants && plants.length > 0) ? (
+                ) : plants && plants.length > 0 ? (
                   plants.map((plant: any) => (
                     <PlantCard key={plant.id} plant={plant} className="hover-lift" />
                   ))
                 ) : (
                   <div className="col-span-full py-16 text-center glass-card rounded-[2rem] flex flex-col items-center justify-center gap-4">
-                    <div className="bg-secondary/50 p-4 rounded-full">
-                      <Leaf className="w-8 h-8 text-muted-foreground" />
+                    <div className="bg-secondary/50 p-6 rounded-full">
+                      <Leaf className="w-12 h-12 text-muted-foreground" />
                     </div>
-                    <p className="text-muted-foreground font-medium">Your garden is empty. Time to plant something?</p>
-                    <Button variant="link" className="text-primary">Add your first plant</Button>
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-foreground">No Plants Yet</h3>
+                      <p className="text-muted-foreground font-medium">Your garden is empty. Time to plant something!</p>
+                    </div>
+                    <Button 
+                      className="vibrant-gradient text-white rounded-full px-6"
+                      onClick={() => setIsAddPlantOpen(true)}
+                    >
+                      <Plus className="mr-2 h-4 w-4" /> Add Your First Plant
+                    </Button>
                   </div>
                 )}
               </div>

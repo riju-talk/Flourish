@@ -117,16 +117,17 @@ const Chat = () => {
                         ? 'bg-white/80 backdrop-blur-md border border-white/50 rounded-tl-none'
                         : 'vibrant-gradient text-white rounded-tr-none'
                       }`}>
-                      <ReactMarkdown
-                        className={`markdown-content ${msg.role === 'user' ? 'text-white' : 'text-foreground'}`}
-                        components={{
-                          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                          ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
-                          strong: ({ children }) => <strong className="font-bold">{children}</strong>
-                        }}
-                      >
-                        {msg.content}
-                      </ReactMarkdown>
+                      <div className={`markdown-content ${msg.role === 'user' ? 'text-white' : 'text-foreground'}`}>
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                            ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                            strong: ({ children }) => <strong className="font-bold">{children}</strong>
+                          }}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
                     </div>
 
                     {/* Follow-up Suggestions */}

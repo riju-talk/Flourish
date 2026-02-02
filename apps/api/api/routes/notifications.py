@@ -49,7 +49,7 @@ async def get_notifications(
     """Get user notifications"""
     try:
         notifications = await FirestoreDB.get_user_notifications(user_id, unread_only, limit)
-        return notifications
+        return {"notifications": notifications}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get notifications: {str(e)}")
 

@@ -161,9 +161,11 @@ const AIAssistant: React.FC = () => {
                     className="max-w-full h-32 object-cover rounded mb-2"
                   />
                 )}
-                <ReactMarkdown className="prose prose-sm max-w-none">
-                  {msg.content}
-                </ReactMarkdown>
+                <div className="prose prose-sm max-w-none">
+                  <ReactMarkdown>
+                    {msg.content}
+                  </ReactMarkdown>
+                </div>
                 <div className={`text-xs mt-2 ${
                   msg.role === 'user' ? 'text-emerald-100' : 'text-gray-500'
                 }`}>

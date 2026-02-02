@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import plants, dashboard, chat, tasks, images, mcp, documents, notifications, leaderboard, storage
+from api.routes import plants, dashboard, chat, tasks, images, mcp, documents, notifications, leaderboard, storage, auth
 from api.core.config import settings
 from api.core.auth import verify_firebase_token
 
@@ -14,20 +14,22 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=["*"],  # Allow all origins in development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Startup event
 @app.on_event("startup")
 async def startup_event():
-    print("🌱 Starting Flourish API...")
-    print("✅ Firebase Firestore ready!")
-    print("💡 No database setup needed - using Firebase!")
+    print("Starting Flourish API...")
+    print("Firebase Firestore ready!")
+    print("No database setup needed - using Firebase!")
 
 # Include routers with authentication dependency
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])  # No auth required for profile creation
 app.include_router(plants.router, prefix="/api/plants", tags=["plants"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"], dependencies=[Depends(verify_firebase_token)])

@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Calendar, CheckCircle, Clock, Droplets, Sprout, Activity } from 'lucide-react';
-import { getTodaySchedule, getWeekSchedule, completeCareTask } from '@/integrations/api';
+import { getTodayTasks, completeCareTask } from '@/integrations/api';
 import { useAuth } from '@/hooks/useAuth';
 
 interface ScheduleItem {
@@ -36,12 +36,10 @@ export default function ScheduleCalendar() {
   const loadSchedules = async () => {
     setLoading(true);
     try {
-      const [todayData, weekData] = await Promise.all([
-        getTodaySchedule(),
-        getWeekSchedule()
-      ]);
+      // Only load today's tasks since /plants/calendar/week doesn't exist
+      const todayData = await getTodayTasks();
       setTodaySchedule(todayData);
-      setWeekSchedule(weekData);
+      // setWeekSchedule([]); // Week schedule endpoint doesn't exist
     } catch (error) {
       console.error('Error loading schedules:', error);
     } finally {
