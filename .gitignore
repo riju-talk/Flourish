@@ -7,10 +7,6 @@ node_modules
 
 # Local env files
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
 # Testing
 coverage
@@ -38,3 +34,6 @@ yarn-error.log*
 *.pem
 
 env/
+
+flourish-de908-firebase-adminsdk-fbsvc-c1de5df356.json
+firebase-service-account.json
