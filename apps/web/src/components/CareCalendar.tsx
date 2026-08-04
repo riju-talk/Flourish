@@ -94,7 +94,7 @@ const CareCalendar: React.FC = () => {
           Upcoming for Today <ClipboardCheck className="h-5 w-5 text-primary" />
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {schedule?.tasks?.map((task: any) => (
+          {schedule?.map((task: any) => (
             <div key={task.id} className="p-4 rounded-2xl bg-white/40 border border-white/20 flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 {task.task_type === 'watering' ? <Droplets className="text-blue-500" /> : <FlaskConical className="text-purple-500" />}
@@ -105,7 +105,7 @@ const CareCalendar: React.FC = () => {
               </div>
             </div>
           ))}
-          {(!schedule?.tasks || schedule.tasks.length === 0) && (
+          {(!schedule || schedule.length === 0) && (
             <p className="col-span-full py-8 text-center italic text-muted-foreground">No tasks scheduled for today.</p>
           )}
         </div>

@@ -1,11 +1,27 @@
+import { useState, useEffect } from "react";
 import { Trophy, Medal, Crown } from "lucide-react";
+import { getLeaderboard } from "@/integrations/api";
+
+const FALLBACK_LEADERS = [
+    { name: "Sunny Leaf", score: 1250, rank: 1 },
+    { name: "Cactus Jack", score: 1100, rank: 2 },
+    { name: "Aloe Vera", score: 950, rank: 3 },
+];
 
 export const LeaderboardPreview = () => {
-    const leaders = [
-        { name: "Sunny Leaf", score: 1250, rank: 1 },
-        { name: "Cactus Jack", score: 1100, rank: 2 },
-        { name: "Aloe Vera", score: 950, rank: 3 },
-    ];
+    const [leaders, setLeaders] = useState(FALLBACK_LEADERS);
+
+    useEffect(() => {
+        getLeaderboard("all_time", 3).then((data) => {
+            if (data?.leaderboard?.length >= 3) {
+                setLeaders(data.leaderboard.slice(0, 3).map((e: any, i: number) => ({
+                    name: e.display_name || "Unknown",
+                    score: e.total_score || 0,
+                    rank: i + 1,
+                })));
+            }
+        }).catch(() => {});
+    }, []);
 
     const getRankIcon = (rank: number) => {
         switch (rank) {

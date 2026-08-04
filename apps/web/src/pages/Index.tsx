@@ -66,7 +66,7 @@ const Index = () => {
               Hello, <span className="text-gradient">Botanist</span> <span className="inline-block animate-bounce">👋</span>
             </h1>
             <p className="text-muted-foreground mt-3 text-lg max-w-xl">
-              Your garden is thriving! You have <strong className="text-primary">{schedule?.tasks?.length || 0} tasks</strong> pending for today.
+              Your garden is thriving! You have <strong className="text-primary">{schedule?.length || 0} tasks</strong> pending for today.
             </p>
           </div>
 
@@ -112,7 +112,7 @@ const Index = () => {
               </div>
 
               <div className="pt-2">
-                <DailyChecklist tasks={schedule?.tasks || []} isLoading={scheduleLoading} />
+                <DailyChecklist tasks={schedule || []} isLoading={scheduleLoading} />
               </div>
             </section>
 

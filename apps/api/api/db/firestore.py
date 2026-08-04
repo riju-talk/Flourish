@@ -3,8 +3,15 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 import uuid
 
-# Get Firestore client
-db = firestore.client()
+# Lazy-initialized Firestore client
+_db = None
+
+def get_db():
+    """Get or initialize the Firestore client lazily"""
+    global _db
+    if _db is None:
+        _db = firestore.client()
+    return _db
 
 # Collection names
 PROFILES_COLLECTION = "profiles"
@@ -27,7 +34,7 @@ class FirestoreDB:
     async def get_profile(user_id: str) -> Optional[Dict]:
         """Get user profile"""
         try:
-            doc = db.collection(PROFILES_COLLECTION).document(user_id).get()
+            doc = get_db().collection(PROFILES_COLLECTION).document(user_id).get()
             if doc.exists:
                 data = doc.to_dict()
                 data['id'] = doc.id
@@ -58,7 +65,7 @@ class FirestoreDB:
             }
             print(f"💾 Creating profile in Firestore for {user_id}")
             print(f"📝 Profile data: {profile_data}")
-            db.collection(PROFILES_COLLECTION).document(user_id).set(profile_data)
+            get_db().collection(PROFILES_COLLECTION).document(user_id).set(profile_data)
             profile_data['id'] = user_id
             print(f"✅ Profile created successfully in collection: {PROFILES_COLLECTION}")
             return profile_data
@@ -70,7 +77,7 @@ class FirestoreDB:
     async def update_profile(user_id: str, updates: Dict) -> None:
         """Update user profile"""
         updates['updated_at'] = firestore.SERVER_TIMESTAMP
-        db.collection(PROFILES_COLLECTION).document(user_id).update(updates)
+        get_db().collection(PROFILES_COLLECTION).document(user_id).update(updates)
     
     @staticmethod
     async def get_or_create_profile(user_id: str, email: str, display_name: str = "", photo_url: str = "") -> Dict:
@@ -97,13 +104,13 @@ class FirestoreDB:
             "created_at": firestore.SERVER_TIMESTAMP,
             "updated_at": firestore.SERVER_TIMESTAMP
         })
-        db.collection(PLANTS_COLLECTION).document(plant_id).set(plant_data)
+        get_db().collection(PLANTS_COLLECTION).document(plant_id).set(plant_data)
         return plant_data
     
     @staticmethod
     async def get_plant(plant_id: str, user_id: str) -> Optional[Dict]:
         """Get a single plant"""
-        doc = db.collection(PLANTS_COLLECTION).document(plant_id).get()
+        doc = get_db().collection(PLANTS_COLLECTION).document(plant_id).get()
         if doc.exists:
             data = doc.to_dict()
             if data.get('user_id') == user_id:
@@ -114,7 +121,7 @@ class FirestoreDB:
     @staticmethod
     async def get_user_plants(user_id: str) -> List[Dict]:
         """Get all plants for a user"""
-        plants_ref = db.collection(PLANTS_COLLECTION).where('user_id', '==', user_id)
+        plants_ref = get_db().collection(PLANTS_COLLECTION).where('user_id', '==', user_id)
         docs = plants_ref.stream()
         plants = []
         for doc in docs:
@@ -127,12 +134,12 @@ class FirestoreDB:
     async def update_plant(plant_id: str, updates: Dict) -> None:
         """Update a plant"""
         updates['updated_at'] = firestore.SERVER_TIMESTAMP
-        db.collection(PLANTS_COLLECTION).document(plant_id).update(updates)
+        get_db().collection(PLANTS_COLLECTION).document(plant_id).update(updates)
     
     @staticmethod
     async def delete_plant(plant_id: str) -> None:
         """Delete a plant"""
-        db.collection(PLANTS_COLLECTION).document(plant_id).delete()
+        get_db().collection(PLANTS_COLLECTION).document(plant_id).delete()
     
     # ============ CARE TASKS ============
     
@@ -144,13 +151,13 @@ class FirestoreDB:
             "id": task_id,
             "created_at": firestore.SERVER_TIMESTAMP
         })
-        db.collection(TASKS_COLLECTION).document(task_id).set(task_data)
+        get_db().collection(TASKS_COLLECTION).document(task_id).set(task_data)
         return task_data
     
     @staticmethod
     async def get_task(task_id: str) -> Optional[Dict]:
         """Get a single task"""
-        doc = db.collection(TASKS_COLLECTION).document(task_id).get()
+        doc = get_db().collection(TASKS_COLLECTION).document(task_id).get()
         if doc.exists:
             data = doc.to_dict()
             data['id'] = doc.id
@@ -160,21 +167,20 @@ class FirestoreDB:
     @staticmethod
     async def get_user_tasks(user_id: str, completed: Optional[bool] = None) -> List[Dict]:
         """Get all tasks for a user"""
-        query = db.collection(TASKS_COLLECTION).where('user_id', '==', user_id)
-        if completed is not None:
-            query = query.where('completed', '==', completed)
+        query = get_db().collection(TASKS_COLLECTION).where('user_id', '==', user_id)
         docs = query.stream()
         tasks = []
         for doc in docs:
             data = doc.to_dict()
             data['id'] = doc.id
-            tasks.append(data)
+            if completed is None or data.get('completed') == completed:
+                tasks.append(data)
         return tasks
     
     @staticmethod
     async def get_plant_tasks(plant_id: str) -> List[Dict]:
         """Get all tasks for a specific plant"""
-        tasks_ref = db.collection(TASKS_COLLECTION).where('plant_id', '==', plant_id)
+        tasks_ref = get_db().collection(TASKS_COLLECTION).where('plant_id', '==', plant_id)
         docs = tasks_ref.stream()
         tasks = []
         for doc in docs:
@@ -186,12 +192,12 @@ class FirestoreDB:
     @staticmethod
     async def update_task(task_id: str, updates: Dict) -> None:
         """Update a task"""
-        db.collection(TASKS_COLLECTION).document(task_id).update(updates)
+        get_db().collection(TASKS_COLLECTION).document(task_id).update(updates)
     
     @staticmethod
     async def delete_task(task_id: str) -> None:
         """Delete a task"""
-        db.collection(TASKS_COLLECTION).document(task_id).delete()
+        get_db().collection(TASKS_COLLECTION).document(task_id).delete()
     
     # ============ NOTIFICATIONS ============
     
@@ -203,13 +209,13 @@ class FirestoreDB:
             "id": notif_id,
             "created_at": firestore.SERVER_TIMESTAMP
         })
-        db.collection(NOTIFICATIONS_COLLECTION).document(notif_id).set(notification_data)
+        get_db().collection(NOTIFICATIONS_COLLECTION).document(notif_id).set(notification_data)
         return notification_data
     
     @staticmethod
     async def get_user_notifications(user_id: str, unread_only: bool = False, limit: int = 50) -> List[Dict]:
         """Get notifications for a user"""
-        query = db.collection(NOTIFICATIONS_COLLECTION).where('user_id', '==', user_id)
+        query = get_db().collection(NOTIFICATIONS_COLLECTION).where('user_id', '==', user_id)
         if unread_only:
             query = query.where('read', '==', False)
         query = query.order_by('created_at', direction=firestore.Query.DESCENDING).limit(limit)
@@ -224,17 +230,17 @@ class FirestoreDB:
     @staticmethod
     async def update_notification(notif_id: str, updates: Dict) -> None:
         """Update a notification"""
-        db.collection(NOTIFICATIONS_COLLECTION).document(notif_id).update(updates)
+        get_db().collection(NOTIFICATIONS_COLLECTION).document(notif_id).update(updates)
     
     @staticmethod
     async def delete_notification(notif_id: str) -> None:
         """Delete a notification"""
-        db.collection(NOTIFICATIONS_COLLECTION).document(notif_id).delete()
+        get_db().collection(NOTIFICATIONS_COLLECTION).document(notif_id).delete()
     
     @staticmethod
     async def mark_all_notifications_read(user_id: str) -> None:
         """Mark all user notifications as read"""
-        notifications = db.collection(NOTIFICATIONS_COLLECTION).where('user_id', '==', user_id).where('read', '==', False).stream()
+        notifications = get_db().collection(NOTIFICATIONS_COLLECTION).where('user_id', '==', user_id).where('read', '==', False).stream()
         for doc in notifications:
             doc.reference.update({'read': True})
     
@@ -248,13 +254,13 @@ class FirestoreDB:
             "id": check_id,
             "checked_at": firestore.SERVER_TIMESTAMP
         })
-        db.collection(HEALTH_CHECKS_COLLECTION).document(check_id).set(health_data)
+        get_db().collection(HEALTH_CHECKS_COLLECTION).document(check_id).set(health_data)
         return health_data
     
     @staticmethod
     async def get_plant_health_checks(plant_id: str) -> List[Dict]:
         """Get health checks for a plant"""
-        checks_ref = db.collection(HEALTH_CHECKS_COLLECTION).where('plant_id', '==', plant_id)
+        checks_ref = get_db().collection(HEALTH_CHECKS_COLLECTION).where('plant_id', '==', plant_id)
         docs = checks_ref.order_by('checked_at', direction=firestore.Query.DESCENDING).stream()
         checks = []
         for doc in docs:
@@ -268,7 +274,7 @@ class FirestoreDB:
     @staticmethod
     async def get_leaderboard(limit: int = 100) -> List[Dict]:
         """Get leaderboard sorted by score"""
-        profiles_ref = db.collection(PROFILES_COLLECTION).order_by('total_score', direction=firestore.Query.DESCENDING).limit(limit)
+        profiles_ref = get_db().collection(PROFILES_COLLECTION).order_by('total_score', direction=firestore.Query.DESCENDING).limit(limit)
         docs = profiles_ref.stream()
         leaderboard = []
         for doc in docs:
@@ -285,6 +291,6 @@ class FirestoreDB:
             return 0
         
         # Count users with higher score
-        higher_scores = db.collection(PROFILES_COLLECTION).where('total_score', '>', profile.get('total_score', 0)).stream()
+        higher_scores = get_db().collection(PROFILES_COLLECTION).where('total_score', '>', profile.get('total_score', 0)).stream()
         rank = len(list(higher_scores)) + 1
         return rank

@@ -55,7 +55,18 @@ export default function Leaderboard() {
     try {
       setLoading(true);
       const data = await getLeaderboard(period, 100);
-      setLeaderboard(data.leaderboard);
+      const mapped = (data.leaderboard || []).map((entry: any) => ({
+        rank: entry.rank || 0,
+        user_id: entry.id,
+        display_name: entry.display_name || 'Unknown',
+        photo_url: entry.photo_url,
+        score: entry.total_score || 0,
+        tasks_completed: entry.tasks_completed || 0,
+        level: entry.level || 1,
+        streak: entry.streak_days || 0,
+        is_current_user: entry.id === user?.uid,
+      }));
+      setLeaderboard(mapped);
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
     } finally {
@@ -66,7 +77,25 @@ export default function Leaderboard() {
   const fetchUserStats = async () => {
     try {
       const stats = await getUserStats();
-      setUserStats(stats);
+      setUserStats({
+        profile: {
+          display_name: user?.displayName || '',
+          email: user?.email || '',
+          photo_url: user?.photoURL,
+          level: stats.level || 1,
+          total_score: stats.total_score || 0,
+          streak_days: stats.streak_days || 0,
+          achievements: stats.achievements || [],
+        },
+        stats: {
+          rank: stats.rank || 0,
+          total_tasks: (stats.tasks_completed || 0) + (stats.completion_rate ? Math.round((stats.tasks_completed || 0) * 100 / stats.completion_rate - (stats.tasks_completed || 0)) : 0),
+          completed_tasks: stats.tasks_completed || 0,
+          pending_tasks: 0,
+          overdue_tasks: 0,
+          completion_rate: stats.completion_rate || 0,
+        },
+      });
     } catch (error) {
       console.error('Failed to fetch user stats:', error);
     }

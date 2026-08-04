@@ -15,7 +15,7 @@
     "start:web": "npm --prefix apps/web run preview",
     "test": "npm run test:api && npm run test:web",
     "test:web": "npm --prefix apps/web run test",
-    "test:api": "cd apps/api && python -m pytest",
+    "test:api": "cd apps/api && pytest",
     "lint": "npm run lint:web",
     "lint:web": "npm --prefix apps/web run lint",
     "install:all": "npm run install:web && npm run install:api",
