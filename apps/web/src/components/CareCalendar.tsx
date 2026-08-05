@@ -1,20 +1,58 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Droplets, FlaskConical, ClipboardCheck } from 'lucide-react';
-import { getCalendarEvents, getTodayTasks } from '@/integrations/api';
+import { getAllUpcomingTasks, getPlants } from '@/integrations/api';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const TASK_STYLE: Record<string, { dot: string; icon: React.ReactNode; label: string }> = {
+  watering: { dot: 'bg-blue-500', icon: <Droplets size={14} className="text-blue-500" />, label: 'Watering' },
+  fertilizing: { dot: 'bg-purple-500', icon: <FlaskConical size={14} className="text-purple-500" />, label: 'Fertilizing' },
+};
+
+const dateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const taskDateKey = (task: any): string | null => {
+  const raw = task.due_date;
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  if (isNaN(parsed.getTime())) return null;
+  return dateKey(parsed);
+};
 
 const CareCalendar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const { data: schedule, isLoading } = useQuery({
-    queryKey: ['care-schedule'],
-    queryFn: () => getTodayTasks(),
+  const { data: tasks, isLoading: tasksLoading } = useQuery({
+    queryKey: ['upcoming-tasks'],
+    queryFn: getAllUpcomingTasks,
   });
 
+  const { data: plants } = useQuery({
+    queryKey: ['plants'],
+    queryFn: getPlants,
+  });
+
+  const plantNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    (plants || []).forEach((p: any) => { map[p.id] = p.name; });
+    return map;
+  }, [plants]);
+
+  const tasksByDate = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    (tasks || []).forEach((task: any) => {
+      const key = taskDateKey(task);
+      if (!key) return;
+      (map[key] ||= []).push(task);
+    });
+    return map;
+  }, [tasks]);
+
+  const todayKey = dateKey(new Date());
+  const todayTasks = tasksByDate[todayKey] || [];
+
+  const isLoading = tasksLoading;
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
 
@@ -35,20 +73,28 @@ const CareCalendar: React.FC = () => {
       days.push(<div key={`empty-${i}`} className="h-24 hidden md:block" />);
     }
     for (let day = 1; day <= daysInMonth; day++) {
-      const isToday = new Date().getDate() === day && new Date().getMonth() === currentDate.getMonth();
+      const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+      const key = dateKey(cellDate);
+      const isToday = key === todayKey;
+      const dayTasks = tasksByDate[key] || [];
+      const taskTypesPresent = Array.from(new Set(dayTasks.map((t) => t.task_type))).filter((t) => TASK_STYLE[t]);
+      const tooltip = dayTasks.map((t) => `${TASK_STYLE[t.task_type]?.label || t.task_type}: ${plantNameById[t.plant_id] || t.title}`).join('\n');
 
       days.push(
         <div
           key={day}
+          title={tooltip || undefined}
           className={`min-h-[100px] p-3 glass-card transition-all hover:bg-secondary/40 ${isToday ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : ''
-            }`}
+            } ${dayTasks.length > 0 && !isToday ? 'ring-1 ring-primary/10' : ''}`}
         >
           <div className={`font-bold text-sm mb-2 ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
             {day}
           </div>
-          {/* Calendar dots logic would go here */}
           <div className="flex gap-1 flex-wrap">
             {isToday && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+            {taskTypesPresent.map((type) => (
+              <div key={type} className={`w-2 h-2 rounded-full ${TASK_STYLE[type].dot}`} />
+            ))}
           </div>
         </div>
       );
@@ -91,18 +137,18 @@ const CareCalendar: React.FC = () => {
           Upcoming for Today <ClipboardCheck className="h-5 w-5 text-primary" />
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {schedule?.map((task: any) => (
+          {todayTasks.map((task: any) => (
             <div key={task.id} className="p-4 rounded-2xl bg-secondary/40 border border-border flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                {task.task_type === 'watering' ? <Droplets className="text-blue-500" /> : <FlaskConical className="text-purple-500" />}
+                {TASK_STYLE[task.task_type]?.icon || <Droplets className="text-blue-500" />}
               </div>
               <div>
                 <h4 className="font-bold text-sm">{task.title}</h4>
-                <p className="text-xs text-muted-foreground">{task.plant_name}</p>
+                <p className="text-xs text-muted-foreground">{plantNameById[task.plant_id] || ''}</p>
               </div>
             </div>
           ))}
-          {(!schedule || schedule.length === 0) && (
+          {!isLoading && todayTasks.length === 0 && (
             <p className="col-span-full py-8 text-center italic text-muted-foreground">No tasks scheduled for today.</p>
           )}
         </div>

@@ -3,14 +3,22 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 import uuid
 
+from ..core.config import settings
+
 # Lazy-initialized Firestore client
 _db = None
 
 def get_db():
-    """Get or initialize the Firestore client lazily"""
+    """
+    Get or initialize the Firestore client lazily. Targets FIRESTORE_DATABASE_ID
+    instead of always assuming "(default)" - the project's "(default)" database can
+    be provisioned in a mode (e.g. Enterprise edition with the classic Firestore API
+    access disabled) that this Admin SDK client can't reach at all, in which case a
+    separate named database with standard Firestore access is required.
+    """
     global _db
     if _db is None:
-        _db = firestore.client()
+        _db = firestore.client(database_id=settings.FIRESTORE_DATABASE_ID)
     return _db
 
 # Collection names
@@ -92,9 +100,15 @@ class FirestoreDB:
                 "created_at": firestore.SERVER_TIMESTAMP,
                 "updated_at": firestore.SERVER_TIMESTAMP
             }
-            get_db().collection(PROFILES_COLLECTION).document(user_id).set(profile_data)
-            profile_data['id'] = user_id
-            return profile_data
+            doc_ref = get_db().collection(PROFILES_COLLECTION).document(user_id)
+            doc_ref.set(profile_data)
+            # profile_data still holds the raw firestore.SERVER_TIMESTAMP sentinels for
+            # created_at/updated_at - Firestore only resolves those server-side, so
+            # returning profile_data directly would hand FastAPI an unserializable
+            # Sentinel object. Re-read the doc to get the actual resolved timestamps.
+            created = doc_ref.get().to_dict()
+            created['id'] = user_id
+            return created
         except Exception as e:
             print(f"Error creating profile for {user_id}: {e}")
             raise

@@ -45,5 +45,11 @@ services:
         sync: false
       - key: FIREBASE_CLIENT_X509_CERT_URL
         sync: false
+      # Only needed if the project's "(default)" Firestore database isn't reachable
+      # via the classic Firestore API (e.g. provisioned as Enterprise edition with
+      # firestoreDataAccessMode disabled) - point this at a named Standard-edition
+      # database instead. Omit to use "(default)".
+      - key: FIRESTORE_DATABASE_ID
+        sync: false
       - key: SECRET_KEY
         generateValue: true

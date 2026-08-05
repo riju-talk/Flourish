@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bell, Check, Trash2, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,13 +8,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  getNotifications, 
-  markNotificationRead, 
-  markAllNotificationsRead, 
-  deleteNotification 
+import {
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteNotification
 } from '@/integrations/api';
 import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/lib/firebase';
 import { format } from 'date-fns';
 
 interface Notification {
@@ -31,14 +32,69 @@ export default function NotificationCenter() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchNotifications();
-      // Poll for notifications every 30 seconds
+      // Poll for notifications every 30 seconds - kept as a fallback in case the
+      // WebSocket connection below drops and hasn't reconnected yet.
       const interval = setInterval(fetchNotifications, 30000);
       return () => clearInterval(interval);
     }
+  }, [user]);
+
+  // Real-time push: the server sends new notifications over this socket the moment
+  // they're created (see NotificationService.notify on the backend), instead of the
+  // client only finding out on its next poll.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    const connect = async () => {
+      if (cancelled) return;
+      const token = await auth.currentUser?.getIdToken().catch(() => null);
+      if (!token || cancelled) return;
+
+      const wsBase = (import.meta.env.VITE_WS_URL as string) || 'ws://localhost:8000';
+      const ws = new WebSocket(`${wsBase}/api/notifications/ws?token=${encodeURIComponent(token)}`);
+      wsRef.current = ws;
+
+      ws.onmessage = (event) => {
+        let notification: Notification;
+        try {
+          notification = JSON.parse(event.data);
+        } catch {
+          return; // e.g. a "pong" keepalive frame, not a notification payload
+        }
+        setNotifications(prev => [notification, ...prev.filter(n => n.id !== notification.id)]);
+        if (!notification.read) {
+          setUnreadCount(prev => prev + 1);
+        }
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(notification.title, { body: notification.message });
+        }
+      };
+
+      ws.onclose = () => {
+        wsRef.current = null;
+        if (!cancelled) {
+          reconnectTimerRef.current = setTimeout(connect, 5000);
+        }
+      };
+
+      ws.onerror = () => ws.close();
+    };
+
+    connect();
+
+    return () => {
+      cancelled = true;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      wsRef.current?.close();
+      wsRef.current = null;
+    };
   }, [user]);
 
   const fetchNotifications = async () => {

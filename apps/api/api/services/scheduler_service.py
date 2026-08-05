@@ -5,6 +5,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from ..db.firestore import FirestoreDB
 from .email_service import EmailService
+from .notification_service import NotificationService
 
 _scheduler: Optional[AsyncIOScheduler] = None
 
@@ -28,13 +29,7 @@ async def _streak_risk_sweep() -> None:
             if 20 <= hours_since < 24:
                 title = "Your streak is at risk! 🔥"
                 message = f"Complete a care task today to keep your {streak_days}-day streak alive."
-                await FirestoreDB.create_notification({
-                    "user_id": user_id,
-                    "type": "streak_risk",
-                    "title": title,
-                    "message": message,
-                    "read": False
-                })
+                await NotificationService.notify(user_id, "streak_risk", title, message)
                 await EmailService.send_for_notification(user_id, "streak_risk", title, message, trigger="scheduled")
     except Exception as e:
         print(f"Streak-risk sweep error: {e}")
@@ -62,13 +57,7 @@ async def _task_due_digest() -> None:
             if due_today:
                 title = "Today's care tasks 🌿"
                 message = f"You have {len(due_today)} task(s) due today."
-                await FirestoreDB.create_notification({
-                    "user_id": user_id,
-                    "type": "task_due",
-                    "title": title,
-                    "message": message,
-                    "read": False
-                })
+                await NotificationService.notify(user_id, "task_due", title, message)
                 await EmailService.send_for_notification(user_id, "task_due", title, message, trigger="scheduled")
     except Exception as e:
         print(f"Task-due digest error: {e}")

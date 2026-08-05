@@ -1,6 +1,7 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Depends, HTTPException
+from firebase_admin import auth as firebase_auth
 from typing import Dict
-from ..core.auth import verify_firebase_token
+from ..core.auth import verify_firebase_token, ensure_firebase_initialized
 from ..db.firestore import FirestoreDB
 
 router = APIRouter()
@@ -27,9 +28,26 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@router.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: str):
-    """WebSocket endpoint for real-time notifications"""
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(...)):
+    """
+    Real-time notification stream. Browsers can't set an Authorization header on a
+    native WebSocket connection, so verify_firebase_token (HTTPBearer-based) can't be
+    used here - it also can't safely sit behind the notifications router's HTTP-only
+    dependency (that crashed every connection with a 500, since router-level
+    dependencies are applied to this route too). The Firebase ID token is passed as a
+    query param instead and verified directly, and the resulting uid - not a
+    client-supplied path parameter - is what determines which user's notifications
+    this connection receives.
+    """
+    ensure_firebase_initialized()
+    try:
+        decoded = firebase_auth.verify_id_token(token)
+        user_id = decoded["uid"]
+    except Exception:
+        await websocket.close(code=4401)
+        return
+
     await manager.connect(user_id, websocket)
     try:
         while True:
@@ -94,23 +112,3 @@ async def delete_notification(
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete notification: {str(e)}")
-
-# Helper function for creating notifications
-async def create_notification(user_id: str, notification_type: str, title: str, message: str):
-    """Create and send a notification to a user"""
-    try:
-        notification = await FirestoreDB.create_notification({
-            "user_id": user_id,
-            "type": notification_type,
-            "title": title,
-            "message": message,
-            "read": False
-        })
-        
-        # Send via WebSocket if user is connected
-        await manager.send_personal_message(user_id, notification)
-        
-        return notification
-    except Exception as e:
-        print(f"Failed to create notification: {e}")
-        return None

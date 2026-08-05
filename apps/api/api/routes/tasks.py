@@ -4,6 +4,8 @@ from datetime import datetime, date, timedelta
 from ..models.task import CareTask
 from ..core.auth import verify_firebase_token
 from ..db.firestore import FirestoreDB
+from ..services.plant_service import PlantService
+from ..services.notification_service import NotificationService
 from ..routes.leaderboard import update_user_score
 
 router = APIRouter()
@@ -67,15 +69,12 @@ async def complete_task(
         # Award points
         points = task.get("points", 10)
         await update_user_score(user_id, points)
-        
+
         # Create notification
-        await FirestoreDB.create_notification({
-            "user_id": user_id,
-            "type": "task_completed",
-            "title": "Task Completed!",
-            "message": f"You earned {points} points for completing: {task.get('title')}",
-            "read": False
-        })
+        await NotificationService.notify(
+            user_id, "task_completed", "Task Completed!",
+            f"You earned {points} points for completing: {task.get('title')}"
+        )
         
         return {
             "success": True,
@@ -135,7 +134,7 @@ async def generate_tasks_for_plant(
     plant_id: str,
     user_id: str = Depends(verify_firebase_token)
 ):
-    """Generate the standard watering/fertilizing/health-check tasks for a plant"""
+    """Generate a real forward-looking watering/fertilizing schedule for a plant"""
     try:
         plant = await FirestoreDB.get_plant(plant_id, user_id)
         if not plant:
@@ -143,41 +142,9 @@ async def generate_tasks_for_plant(
 
         existing_tasks = await FirestoreDB.get_plant_tasks(plant_id)
         existing_types = {t.get("task_type") for t in existing_tasks if not t.get("completed")}
+        missing_types = [t for t in ("watering", "fertilizing") if t not in existing_types]
 
-        now_iso = datetime.now().isoformat()
-        to_create = []
-
-        if "watering" not in existing_types:
-            to_create.append({
-                "user_id": user_id,
-                "plant_id": plant_id,
-                "task_type": "watering",
-                "title": f"Water {plant.get('name', 'your plant')}",
-                "description": plant.get("watering_amount", "Water thoroughly"),
-                "due_date": now_iso,
-                "priority": "medium",
-                "completed": False,
-                "points": 10,
-                "recurring": True,
-                "recurring_days": plant.get("watering_frequency_days", 7)
-            })
-
-        if "fertilizing" not in existing_types:
-            to_create.append({
-                "user_id": user_id,
-                "plant_id": plant_id,
-                "task_type": "fertilizing",
-                "title": f"Fertilize {plant.get('name', 'your plant')}",
-                "description": plant.get("fertilizer_type", "Apply fertilizer"),
-                "due_date": now_iso,
-                "priority": "low",
-                "completed": False,
-                "points": 15,
-                "recurring": True,
-                "recurring_days": plant.get("fertilizer_frequency_days", 30)
-            })
-
-        created = [await FirestoreDB.create_task(t) for t in to_create]
+        created = await PlantService.create_projected_schedule(user_id, plant, types=missing_types) if missing_types else []
         return {"success": True, "tasks_created": created}
     except HTTPException:
         raise

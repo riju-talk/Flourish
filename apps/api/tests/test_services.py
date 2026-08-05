@@ -100,60 +100,61 @@ class TestWeatherService:
 
 
 class TestPlantService:
-    def test_generate_care_schedule_default_plant(self):
-        plant = Plant(
-            id="plant-1",
-            name="Test Plant",
-            species="Test Species",
-            watering_frequency_days=7
-        )
-        # Plant model doesn't have fertilizing_frequency_days, so patch it to 0 to skip fertilizing branch
-        object.__setattr__(plant, 'fertilizing_frequency_days', 0)
+    @staticmethod
+    def _mock_create_task():
+        """FirestoreDB.create_task echoes the task dict back with a fake id, like real Firestore writes."""
+        async def _create(task_data):
+            return {**task_data, "id": f"task-{len(task_data)}-{task_data['task_type']}-{task_data['due_date']}"}
+        return _create
 
-        import asyncio
-        tasks = asyncio.run(PlantService.generate_care_schedule(plant))
+    @pytest.mark.asyncio
+    async def test_projected_schedule_watering_only(self):
+        plant = {"id": "plant-1", "name": "Test Plant", "watering_frequency_days": 7}
 
-        # 14 watering tasks (every 7 days for 2 weeks * 7 days interval → 14 iterations)
-        # 7 daily health check tasks
-        # No fertilizing since fertilizing_frequency_days is 0
-        assert len(tasks) == 14 + 7
+        with patch("api.services.plant_service.FirestoreDB.create_task", side_effect=self._mock_create_task()):
+            tasks = await PlantService.create_projected_schedule("user-1", plant, types=["watering"])
 
-        task_types = {t.task_type for t in tasks}
-        assert "watering" in task_types
-        assert "checking" in task_types
-        assert "fertilizing" not in task_types
+        # ceil(30 / 7) = 5 occurrences, covering ~30 days ahead
+        assert len(tasks) == 5
+        assert all(t["task_type"] == "watering" for t in tasks)
+        assert all(t["plant_id"] == "plant-1" for t in tasks)
+        assert all(t["user_id"] == "user-1" for t in tasks)
 
-    def test_generate_care_schedule_with_fertilizing(self):
-        plant = Plant(
-            id="plant-2",
-            name="Fern",
-            species="Nephrolepis",
-            watering_frequency_days=3
-        )
-        object.__setattr__(plant, 'fertilizing_frequency_days', 30)
+    @pytest.mark.asyncio
+    async def test_projected_schedule_includes_fertilizing(self):
+        plant = {
+            "id": "plant-2", "name": "Fern",
+            "watering_frequency_days": 3, "fertilizer_frequency_days": 30
+        }
 
-        import asyncio
-        tasks = asyncio.run(PlantService.generate_care_schedule(plant))
+        with patch("api.services.plant_service.FirestoreDB.create_task", side_effect=self._mock_create_task()):
+            tasks = await PlantService.create_projected_schedule("user-1", plant)
 
-        task_types = {t.task_type for t in tasks}
+        task_types = {t["task_type"] for t in tasks}
         assert "fertilizing" in task_types
         assert "watering" in task_types
-        assert "checking" in task_types
-
-        # Verify all tasks reference the correct plant
         for task in tasks:
-            assert task.plant_id == "plant-2"
+            assert task["plant_id"] == "plant-2"
 
-    def test_watering_task_first_priority_high(self):
-        plant = Plant(id="p1", name="Aloe", species="Aloe vera", watering_frequency_days=7)
-        object.__setattr__(plant, 'fertilizing_frequency_days', 0)
+    @pytest.mark.asyncio
+    async def test_watering_task_first_priority_high(self):
+        plant = {"id": "p1", "name": "Aloe", "watering_frequency_days": 7}
 
-        import asyncio
-        tasks = asyncio.run(PlantService.generate_care_schedule(plant))
+        with patch("api.services.plant_service.FirestoreDB.create_task", side_effect=self._mock_create_task()):
+            tasks = await PlantService.create_projected_schedule("user-1", plant, types=["watering"])
 
-        watering_tasks = [t for t in tasks if t.task_type == "watering"]
-        assert watering_tasks[0].priority == "high"
-        assert all(t.priority == "medium" for t in watering_tasks[1:])
+        assert tasks[0]["priority"] == "high"
+        assert all(t["priority"] == "medium" for t in tasks[1:])
+
+    @pytest.mark.asyncio
+    async def test_projected_schedule_occurrence_count_is_capped(self):
+        # Daily watering (1-day interval) would naively be 30 occurrences - must be capped at 6.
+        plant = {"id": "p1", "name": "Fern", "watering_frequency_days": 1}
+
+        with patch("api.services.plant_service.FirestoreDB.create_task", side_effect=self._mock_create_task()):
+            tasks = await PlantService.create_projected_schedule("user-1", plant, types=["watering"])
+
+        assert len(tasks) == 6
 
     @pytest.mark.asyncio
     async def test_fetch_plant_image_success(self):
@@ -191,14 +192,3 @@ class TestPlantService:
         with patch("httpx.AsyncClient", return_value=mock_client):
             url = await PlantService.fetch_plant_image("Aloe", "Aloe vera")
             assert "images.unsplash.com" in url
-
-    def test_health_check_task_estimated_time(self):
-        plant = Plant(id="p1", name="Cactus", species="Cactaceae")
-        object.__setattr__(plant, 'fertilizing_frequency_days', 0)
-
-        import asyncio
-        tasks = asyncio.run(PlantService.generate_care_schedule(plant))
-
-        checking_tasks = [t for t in tasks if t.task_type == "checking"]
-        for task in checking_tasks:
-            assert task.estimated_time == "2 minutes"

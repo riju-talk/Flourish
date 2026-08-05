@@ -3,6 +3,7 @@ from ..core.auth import verify_firebase_token
 from ..db.firestore import FirestoreDB
 from ..services.groq_service import GroqService
 from ..services.email_service import EmailService
+from ..services.notification_service import NotificationService
 
 router = APIRouter()
 
@@ -26,13 +27,7 @@ async def generate_recommendations(
         if recommendations:
             title = "New plant picks ready! 🌿"
             message = f"We found {len(recommendations)} new plant(s) that could thrive in your garden."
-            await FirestoreDB.create_notification({
-                "user_id": user_id,
-                "type": "recommendation_ready",
-                "title": title,
-                "message": message,
-                "read": False
-            })
+            await NotificationService.notify(user_id, "recommendation_ready", title, message)
             await EmailService.send_for_notification(user_id, "recommendation_ready", title, message)
 
         return {"success": True, "recommendations": recommendations}

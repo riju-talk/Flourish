@@ -2,8 +2,7 @@ import httpx
 from typing import List, Optional
 from datetime import datetime, timedelta
 from ..core.config import settings
-from ..models.plant import Plant
-from ..models.task import CareTask
+from ..db.firestore import FirestoreDB
 
 class PlantService:
     @staticmethod
@@ -50,47 +49,59 @@ class PlantService:
             pass
 
     @staticmethod
-    async def generate_care_schedule(plant: Plant) -> List[CareTask]:
-        """Generate AI-optimized care schedule"""
-        tasks = []
+    async def create_projected_schedule(
+        user_id: str,
+        plant: dict,
+        types: Optional[List[str]] = None
+    ) -> List[dict]:
+        """
+        Persist a real forward-looking care schedule (several upcoming watering/
+        fertilizing occurrences, not just a single "due now" task) so the Calendar has
+        actual future dates to render as soon as a plant is added. Called by both the
+        agentic autonomous-create flow and the manual "generate tasks" endpoint.
+        """
+        types = types or ["watering", "fertilizing"]
         now = datetime.now()
-        
-        # Generate watering schedule
-        for i in range(14):  # Next 2 weeks
-            task_date = now + timedelta(days=i * plant.watering_frequency_days)
-            tasks.append(CareTask(
-                plant_id=plant.id,
-                task_type="watering",
-                title=f"Water {plant.name}",
-                description=f"Regular watering for {plant.species}",
-                scheduled_date=task_date,
-                priority="high" if i == 0 else "medium"
-            ))
-        
-        # Generate fertilizing schedule
-        if plant.fertilizing_frequency_days:
-            for i in range(4):  # Next few months
-                task_date = now + timedelta(days=i * plant.fertilizing_frequency_days)
-                tasks.append(CareTask(
-                    plant_id=plant.id,
-                    task_type="fertilizing",
-                    title=f"Fertilize {plant.name}",
-                    description=f"Nutrient boost for {plant.species}",
-                    scheduled_date=task_date,
-                    priority="medium"
-                ))
-        
-        # Generate health check schedule
-        for i in range(7):  # Daily checks for a week
-            task_date = now + timedelta(days=i)
-            tasks.append(CareTask(
-                plant_id=plant.id,
-                task_type="checking",
-                title=f"Health check for {plant.name}",
-                description="Daily health monitoring",
-                scheduled_date=task_date,
-                priority="low",
-                estimated_time="2 minutes"
-            ))
-        
-        return tasks
+        plant_id = plant["id"]
+        plant_name = plant.get("name", "your plant")
+        to_create = []
+
+        if "watering" in types:
+            watering_days = plant.get("watering_frequency_days") or 7
+            occurrences = max(1, min(6, -(-30 // watering_days)))  # cover ~30 days ahead, capped
+            for i in range(occurrences):
+                due = now + timedelta(days=i * watering_days)
+                to_create.append({
+                    "user_id": user_id,
+                    "plant_id": plant_id,
+                    "task_type": "watering",
+                    "title": f"Water {plant_name}",
+                    "description": plant.get("watering_amount") or "Water thoroughly",
+                    "due_date": due.isoformat(),
+                    "priority": "high" if i == 0 else "medium",
+                    "completed": False,
+                    "points": 10,
+                    "recurring": True,
+                    "recurring_days": watering_days
+                })
+
+        if "fertilizing" in types:
+            fertilizer_days = plant.get("fertilizer_frequency_days") or 30
+            occurrences = max(1, min(4, -(-90 // fertilizer_days)))  # cover ~90 days ahead, capped
+            for i in range(occurrences):
+                due = now + timedelta(days=i * fertilizer_days)
+                to_create.append({
+                    "user_id": user_id,
+                    "plant_id": plant_id,
+                    "task_type": "fertilizing",
+                    "title": f"Fertilize {plant_name}",
+                    "description": plant.get("fertilizer_type") or "Apply fertilizer",
+                    "due_date": due.isoformat(),
+                    "priority": "low",
+                    "completed": False,
+                    "points": 15,
+                    "recurring": True,
+                    "recurring_days": fertilizer_days
+                })
+
+        return [await FirestoreDB.create_task(t) for t in to_create]

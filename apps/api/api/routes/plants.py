@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 from ..models.plant import Plant, HealthCheckItem, PlantInventory, CareSchedule
@@ -8,22 +9,31 @@ from ..services.autonomous_plant_service import AutonomousPlantService
 from ..services.groq_service import GroqService
 from ..core.auth import verify_firebase_token
 from ..db.firestore import FirestoreDB
+from ..services.notification_service import NotificationService
 from ..routes.leaderboard import update_user_score
 
 router = APIRouter()
 
+class PlantLookupRequest(BaseModel):
+    plant_name: str
+
+class AutonomousPlantRequest(BaseModel):
+    plant_name: str
+    user_location: Optional[str] = None
+
 @router.post("/lookup")
 async def agentic_plant_lookup(
-    plant_name: str,
+    payload: PlantLookupRequest,
     user_id: str = Depends(verify_firebase_token)
 ):
     """
     Agentic Plant Lookup: Type a plant name and get comprehensive information
     Uses Groq (LangChain agent) + external APIs to retrieve all relevant data
     """
+    plant_name = payload.plant_name
     try:
         plant_info = await GroqService.get_plant_info_agentic(plant_name)
-        
+
         # Fetch image from Unsplash
         try:
             image_url = await PlantService.fetch_plant_image(
@@ -33,7 +43,7 @@ async def agentic_plant_lookup(
             plant_info["image_url"] = image_url
         except:
             plant_info["image_url"] = None
-        
+
         return {
             "success": True,
             "plant_info": plant_info
@@ -43,17 +53,18 @@ async def agentic_plant_lookup(
 
 @router.post("/autonomous")
 async def create_autonomous_plant(
-    plant_name: str,
-    user_location: Optional[str] = None,
+    payload: AutonomousPlantRequest,
     user_id: str = Depends(verify_firebase_token)
 ):
     """
     Create a plant with AI-generated care schedule
     """
+    plant_name = payload.plant_name
+    user_location = payload.user_location
     try:
         # Get plant info from agentic lookup
         plant_info = await GroqService.get_plant_info_agentic(plant_name)
-        
+
         # Fetch image
         image_url = None
         try:
@@ -63,7 +74,12 @@ async def create_autonomous_plant(
             )
         except:
             pass
-        
+
+        watering = plant_info.get("watering") or {}
+        fertilizing = plant_info.get("fertilizing") or {}
+        watering_days = _parse_frequency_days(watering.get("frequency"), default=7)
+        fertilizing_days = _parse_frequency_days(fertilizing.get("frequency"), default=30)
+
         # Create plant
         plant_data = {
             "name": plant_info.get("common_name", plant_name),
@@ -72,32 +88,18 @@ async def create_autonomous_plant(
             "image_url": image_url,
             "care_instructions": plant_info,
             "health_status": "healthy",
+            "watering_frequency_days": watering_days,
+            "watering_amount": watering.get("amount", ""),
+            "fertilizer_frequency_days": fertilizing_days,
+            "fertilizer_type": fertilizing.get("type", ""),
             "last_watered": None,
             "next_watering": None
         }
-        
+
         plant = await FirestoreDB.create_plant(user_id, plant_data)
-        
-        # Create initial care tasks based on plant info
-        care_schedule = plant_info.get("care_schedule", {})
-        tasks = []
-        
-        if care_schedule.get("watering"):
-            task_data = {
-                "user_id": user_id,
-                "plant_id": plant["id"],
-                "task_type": "watering",
-                "title": f"Water {plant['name']}",
-                "description": care_schedule["watering"],
-                "due_date": datetime.now().isoformat(),
-                "recurring": True,
-                "recurring_days": 7,
-                "completed": False,
-                "points": 10
-            }
-            task = await FirestoreDB.create_task(task_data)
-            tasks.append(task)
-        
+
+        tasks = await PlantService.create_projected_schedule(user_id, plant)
+
         return {
             "success": True,
             "plant": plant,
@@ -105,6 +107,21 @@ async def create_autonomous_plant(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create plant: {str(e)}")
+
+def _parse_frequency_days(frequency: Optional[str], default: int) -> int:
+    """Best-effort extraction of a day count from Groq's free-text frequency string."""
+    if not frequency:
+        return default
+    import re
+    match = re.search(r'(\d+)', frequency)
+    if not match:
+        return default
+    days = int(match.group(1))
+    if "week" in frequency.lower():
+        days *= 7
+    elif "month" in frequency.lower():
+        days *= 30
+    return days if days > 0 else default
 
 @router.post("/")
 async def create_plant(
@@ -250,13 +267,10 @@ async def complete_schedule_item(
     points = task.get("points", 10)
     await update_user_score(user_id, points)
 
-    await FirestoreDB.create_notification({
-        "user_id": user_id,
-        "type": "task_completed",
-        "title": "Task Completed!",
-        "message": f"You earned {points} points for completing: {task.get('title')}",
-        "read": False
-    })
+    await NotificationService.notify(
+        user_id, "task_completed", "Task Completed!",
+        f"You earned {points} points for completing: {task.get('title')}"
+    )
 
     return {"success": True, "points_earned": points}
 

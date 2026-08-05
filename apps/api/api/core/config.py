@@ -64,6 +64,13 @@ class Settings(BaseSettings):
     FIREBASE_CLIENT_X509_CERT_URL: str = os.getenv("FIREBASE_CLIENT_X509_CERT_URL", "")
     FIREBASE_UNIVERSE_DOMAIN: str = os.getenv("FIREBASE_UNIVERSE_DOMAIN", "googleapis.com")
 
+    # Which Firestore database (within the Firebase project) to connect to. Defaults to
+    # the project's "(default)" database; override when that database isn't reachable
+    # via the classic Firestore API (e.g. it was provisioned as Enterprise edition with
+    # firestoreDataAccessMode disabled) and a separate named database must be used
+    # instead. See db/firestore.py's get_db().
+    FIRESTORE_DATABASE_ID: str = os.getenv("FIRESTORE_DATABASE_ID", "(default)")
+
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "change-this-secret-key-in-production")
 

@@ -1,132 +1,98 @@
-
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sparkles, Loader2 } from 'lucide-react';
+import { createAutonomousPlant } from '@/integrations/api';
 
 interface AddPlantDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddPlant: (plant: any) => void;
+  onSuccess: () => void;
 }
 
-const AddPlantDialog: React.FC<AddPlantDialogProps> = ({ open, onOpenChange, onAddPlant }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    type: '',
-    location: '',
-    sunlight: '',
-    image: ''
-  });
+const AddPlantDialog: React.FC<AddPlantDialogProps> = ({ open, onOpenChange, onSuccess }) => {
+  const [plantName, setPlantName] = useState('');
+  const [location, setLocation] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const plantTypes = [
-    "Indoor Plant",
-    "Outdoor Plant",
-    "Herb",
-    "Succulent",
-    "Flowering Plant",
-    "Tree"
-  ];
-
-  const sunlightOptions = [
-    "Full Sun",
-    "Partial Sun",
-    "Bright, indirect",
-    "Low light",
-    "Shade"
-  ];
-
-  const plantImages = [
-    "https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=300&h=200&fit=crop",
-    "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=300&h=200&fit=crop",
-    "https://images.unsplash.com/photo-1535268647677-300dbf3d78d1?w=300&h=200&fit=crop",
-    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300&h=200&fit=crop"
-  ];
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.name && formData.type && formData.location && formData.sunlight) {
-      onAddPlant({
-        name: formData.name,
-        species: formData.type,
-        location: formData.location,
-        sunlight_requirement: formData.sunlight,
-        image_url: formData.image || plantImages[Math.floor(Math.random() * plantImages.length)],
-        plant_type: formData.type.toLowerCase().includes('indoor') ? 'indoor' : formData.type.toLowerCase().includes('outdoor') ? 'outdoor' : 'both',
-        watering_frequency_days: 7,
-        fertilizing_frequency_days: 30,
-        pruning_frequency_days: 90,
-        health_status: "healthy"
-      });
-      setFormData({ name: '', type: '', location: '', sunlight: '', image: '' });
+    if (!plantName.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await createAutonomousPlant(plantName.trim(), location.trim() || undefined);
+      setPlantName('');
+      setLocation('');
+      onOpenChange(false);
+      onSuccess();
+    } catch (err) {
+      setError("Couldn't add that plant right now. Try again in a moment.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-white/95 backdrop-blur-sm">
+    <Dialog open={open} onOpenChange={(next) => !isSubmitting && onOpenChange(next)}>
+      <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-gray-800">Add New Plant</DialogTitle>
+          <DialogTitle className="font-serif text-xl flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" /> Add a Plant
+          </DialogTitle>
+          <DialogDescription>
+            PlantMind will research its care needs, find a matching photo, and build its
+            watering &amp; fertilizing schedule automatically.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Plant Name</Label>
+            <Label htmlFor="plant-name">Plant name</Label>
             <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g., Monstera Deliciosa"
-              className="border-green-200 focus:border-green-400"
+              id="plant-name"
+              value={plantName}
+              onChange={(e) => setPlantName(e.target.value)}
+              placeholder="e.g., Monstera Deliciosa, Snake Plant, Basil"
+              autoFocus
+              disabled={isSubmitting}
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="type">Plant Type</Label>
-            <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-              <SelectTrigger className="border-green-200 focus:border-green-400">
-                <SelectValue placeholder="Select plant type" />
-              </SelectTrigger>
-              <SelectContent>
-                {plantTypes.map((type) => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
+            <Label htmlFor="location">Where will it live? (optional)</Label>
             <Input
               id="location"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
               placeholder="e.g., Living Room, Balcony"
-              className="border-green-200 focus:border-green-400"
+              disabled={isSubmitting}
             />
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="sunlight">Sunlight Requirements</Label>
-            <Select value={formData.sunlight} onValueChange={(value) => setFormData({ ...formData, sunlight: value })}>
-              <SelectTrigger className="border-green-200 focus:border-green-400">
-                <SelectValue placeholder="Select sunlight needs" />
-              </SelectTrigger>
-              <SelectContent>
-                {sunlightOptions.map((option) => (
-                  <SelectItem key={option} value={option}>{option}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <div className="flex justify-end space-x-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" className="bg-green-600 hover:bg-green-700">
-              Add Plant
+            <Button
+              type="submit"
+              disabled={!plantName.trim() || isSubmitting}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Researching...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" /> Add to My Garden
+                </>
+              )}
             </Button>
           </div>
         </form>

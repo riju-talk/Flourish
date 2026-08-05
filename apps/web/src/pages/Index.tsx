@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -9,7 +9,7 @@ import { LeaderboardPreview } from "@/components/LeaderboardPreview";
 import { AddPlantDialog } from "@/components/AddPlantDialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Leaf, Calendar as CalendarIcon, Trophy, Sparkles } from "lucide-react";
-import { getPlants, getTodayTasks, createPlant } from "@/integrations/api";
+import { getPlants, getTodayTasks, generateRecommendations } from "@/integrations/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -36,29 +36,23 @@ const Index = () => {
     queryFn: getTodayTasks,
   });
 
-  const addPlantMutation = useMutation({
-    mutationFn: createPlant,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["plants"] });
-      setIsAddPlantOpen(false);
-      console.log("Plant added successfully!");
-    },
-    onError: (error) => {
-      console.error("Failed to add plant:", error);
-    },
-  });
-
-  const handleAddPlant = (plantData: any) => {
-    addPlantMutation.mutate(plantData);
+  const handlePlantAdded = () => {
+    queryClient.invalidateQueries({ queryKey: ["plants"] });
+    queryClient.invalidateQueries({ queryKey: ["today-schedule"] });
+    // Fire-and-forget: let PlantMind refresh suggestions in the background now that
+    // the garden has grown, so "For You" stays current without the user asking.
+    generateRecommendations(3)
+      .then(() => queryClient.invalidateQueries({ queryKey: ["recommendations"] }))
+      .catch(() => {});
   };
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col">
       <Navbar />
       <AddPlantDialog
-        open={isAddPlantOpen} 
+        open={isAddPlantOpen}
         onOpenChange={setIsAddPlantOpen}
-        onAddPlant={handleAddPlant}
+        onSuccess={handlePlantAdded}
       />
 
       <main className="flex-1 container mx-auto px-4 py-8 space-y-10">
@@ -123,7 +117,7 @@ const Index = () => {
             {/* Plant Inventory */}
             <section className="space-y-6 animate-in fade-in duration-1000 ease-out delay-200">
               <div className="flex items-center justify-between">
-                <h2 className="font-serif text-2xl font-semibold text-foreground">My Jungle</h2>
+                <h2 className="font-serif text-2xl font-semibold text-foreground">My Garden</h2>
                 <Button variant="ghost" className="text-primary font-semibold hover:bg-primary/5 rounded-full">See all plants</Button>
               </div>
 

@@ -2,25 +2,28 @@ import { useState, useEffect } from "react";
 import { Trophy, Medal, Crown } from "lucide-react";
 import { getLeaderboard } from "@/integrations/api";
 
-const FALLBACK_LEADERS = [
-    { name: "Sunny Leaf", score: 1250, rank: 1 },
-    { name: "Cactus Jack", score: 1100, rank: 2 },
-    { name: "Aloe Vera", score: 950, rank: 3 },
-];
+interface Leader {
+    name: string;
+    score: number;
+    rank: number;
+}
 
 export const LeaderboardPreview = () => {
-    const [leaders, setLeaders] = useState(FALLBACK_LEADERS);
+    const [leaders, setLeaders] = useState<Leader[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        getLeaderboard("all_time", 3).then((data) => {
-            if (data?.leaderboard?.length >= 3) {
-                setLeaders(data.leaderboard.slice(0, 3).map((e: any, i: number) => ({
+        getLeaderboard("all_time", 3)
+            .then((data) => {
+                const entries = data?.leaderboard || [];
+                setLeaders(entries.slice(0, 3).map((e: any, i: number) => ({
                     name: e.display_name || "Unknown",
                     score: e.total_score || 0,
                     rank: i + 1,
                 })));
-            }
-        }).catch(() => {});
+            })
+            .catch(() => setLeaders([]))
+            .finally(() => setLoading(false));
     }, []);
 
     const getRankIcon = (rank: number) => {
@@ -45,7 +48,11 @@ export const LeaderboardPreview = () => {
             </div>
 
             <div className="space-y-4 relative z-10">
-                {leaders.map((leader, index) => (
+                {loading ? (
+                    <p className="text-center text-sm text-muted-foreground py-4">Loading leaders...</p>
+                ) : leaders.length === 0 ? (
+                    <p className="text-center text-sm text-muted-foreground py-4">Be the first to bloom!</p>
+                ) : leaders.map((leader, index) => (
                     <div
                         key={leader.name}
                         className="flex items-center justify-between p-3 rounded-2xl bg-secondary/40 border border-border transition-all duration-500 ease-out hover:scale-[1.01] hover:bg-secondary/70"
