@@ -32,9 +32,9 @@ class Settings(BaseSettings):
     
     # AI Settings
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3")
-    
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
+
     # Image Settings
     UNSPLASH_ACCESS_KEY: str = os.getenv("UNSPLASH_ACCESS_KEY", "")
     

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, Medal, Award, TrendingUp } from 'lucide-react';
+import { Trophy, Medal, Award, TrendingUp, Mail, Phone } from 'lucide-react';
 import { getLeaderboard, getUserStats } from '@/integrations/api';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -17,6 +17,8 @@ interface LeaderboardEntry {
   level: number;
   streak: number;
   is_current_user: boolean;
+  email?: string;
+  phone_number?: string;
 }
 
 interface UserStats {
@@ -65,6 +67,8 @@ export default function Leaderboard() {
         level: entry.level || 1,
         streak: entry.streak_days || 0,
         is_current_user: entry.id === user?.uid,
+        email: entry.email,
+        phone_number: entry.phone_number,
       }));
       setLeaderboard(mapped);
     } catch (error) {
@@ -209,6 +213,20 @@ export default function Leaderboard() {
                         <p className="text-sm text-muted-foreground">
                           Level {entry.level} • {entry.tasks_completed} tasks
                         </p>
+                        {(entry.email || entry.phone_number) && (
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                            {entry.email && (
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" /> {entry.email}
+                              </span>
+                            )}
+                            {entry.phone_number && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" /> {entry.phone_number}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from ..models.task import CareTask
 from ..core.auth import verify_firebase_token
 from ..db.firestore import FirestoreDB
@@ -82,6 +82,105 @@ async def complete_task(
             "task": task,
             "points_earned": points
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/{task_id}/snooze")
+async def snooze_task(
+    task_id: str,
+    hours: int = 24,
+    user_id: str = Depends(verify_firebase_token)
+):
+    """Push a task's due date forward without completing it"""
+    try:
+        task = await FirestoreDB.get_task(task_id)
+        if not task or task.get("user_id") != user_id:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        due_date = task.get("due_date")
+        if due_date:
+            base = datetime.fromisoformat(due_date.replace('Z', '+00:00'))
+        else:
+            base = datetime.now()
+        new_due_date = (base + timedelta(hours=hours)).isoformat()
+
+        await FirestoreDB.update_task(task_id, {"due_date": new_due_date})
+        return {"success": True, "due_date": new_due_date}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.patch("/{task_id}/reschedule")
+async def reschedule_task(
+    task_id: str,
+    due_date: str,
+    user_id: str = Depends(verify_firebase_token)
+):
+    """Set a task's due date explicitly"""
+    try:
+        task = await FirestoreDB.get_task(task_id)
+        if not task or task.get("user_id") != user_id:
+            raise HTTPException(status_code=404, detail="Task not found")
+
+        await FirestoreDB.update_task(task_id, {"due_date": due_date})
+        return {"success": True, "due_date": due_date}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/generate/{plant_id}")
+async def generate_tasks_for_plant(
+    plant_id: str,
+    user_id: str = Depends(verify_firebase_token)
+):
+    """Generate the standard watering/fertilizing/health-check tasks for a plant"""
+    try:
+        plant = await FirestoreDB.get_plant(plant_id, user_id)
+        if not plant:
+            raise HTTPException(status_code=404, detail="Plant not found")
+
+        existing_tasks = await FirestoreDB.get_plant_tasks(plant_id)
+        existing_types = {t.get("task_type") for t in existing_tasks if not t.get("completed")}
+
+        now_iso = datetime.now().isoformat()
+        to_create = []
+
+        if "watering" not in existing_types:
+            to_create.append({
+                "user_id": user_id,
+                "plant_id": plant_id,
+                "task_type": "watering",
+                "title": f"Water {plant.get('name', 'your plant')}",
+                "description": plant.get("watering_amount", "Water thoroughly"),
+                "due_date": now_iso,
+                "priority": "medium",
+                "completed": False,
+                "points": 10,
+                "recurring": True,
+                "recurring_days": plant.get("watering_frequency_days", 7)
+            })
+
+        if "fertilizing" not in existing_types:
+            to_create.append({
+                "user_id": user_id,
+                "plant_id": plant_id,
+                "task_type": "fertilizing",
+                "title": f"Fertilize {plant.get('name', 'your plant')}",
+                "description": plant.get("fertilizer_type", "Apply fertilizer"),
+                "due_date": now_iso,
+                "priority": "low",
+                "completed": False,
+                "points": 15,
+                "recurring": True,
+                "recurring_days": plant.get("fertilizer_frequency_days", 30)
+            })
+
+        created = [await FirestoreDB.create_task(t) for t in to_create]
+        return {"success": True, "tasks_created": created}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

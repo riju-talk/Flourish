@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Leaf, LayoutDashboard, MessageSquare, Calendar, User, Search, FileText, Trophy } from "lucide-react";
+import { Leaf, LayoutDashboard, MessageSquare, Calendar, User, Search, FileText, Trophy, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import NotificationCenter from "./NotificationCenter";
 
@@ -13,6 +13,7 @@ export const Navbar = () => {
         { icon: <Search size={18} />, label: "Plant Lookup", path: "/lookup" },
         { icon: <Calendar size={18} />, label: "Calendar", path: "/calendar" },
         { icon: <FileText size={18} />, label: "Documents", path: "/documents" },
+        { icon: <Sparkles size={18} />, label: "For You", path: "/recommendations" },
         { icon: <Trophy size={18} />, label: "Leaderboard", path: "/leaderboard" },
     ];
 

@@ -1,31 +1,34 @@
 import httpx
 from typing import List
 from datetime import datetime, timedelta
+from ..core.config import settings
 from ..models.plant import Plant
 from ..models.task import CareTask
 
 class PlantService:
     @staticmethod
     async def fetch_plant_image(plant_name: str, species: str) -> str:
-        """Fetch a plant image from Unsplash API"""
+        """Fetch a plant image from Unsplash API, used when adding a plant to the garden"""
         try:
             query = f"{plant_name} {species} plant"
             url = "https://api.unsplash.com/search/photos"
             params = {
                 "query": query,
                 "per_page": 1,
-                "client_id": "demo"  # Replace with actual Unsplash API key
+                "client_id": settings.UNSPLASH_ACCESS_KEY or "demo"
             }
-            
+
             async with httpx.AsyncClient() as client:
                 response = await client.get(url, params=params)
                 if response.status_code == 200:
                     data = response.json()
                     if data["results"]:
                         return data["results"][0]["urls"]["regular"]
+                else:
+                    print(f"Unsplash API returned {response.status_code}: {response.text[:200]}")
         except Exception as e:
             print(f"Error fetching image: {e}")
-        
+
         # Fallback to a default plant image
         return "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=300&fit=crop"
 

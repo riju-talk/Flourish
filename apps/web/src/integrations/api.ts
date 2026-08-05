@@ -40,6 +40,53 @@ api.interceptors.response.use(
   }
 );
 
+// ---- PROFILE / ONBOARDING ----
+export async function getProfile() {
+  const { data } = await api.get('/auth/profile');
+  return data;
+}
+
+export async function createProfile(payload: {
+  email: string;
+  display_name?: string;
+  photo_url?: string;
+  full_name: string;
+  phone_number: string;
+}) {
+  const { data } = await api.post('/auth/profile', payload);
+  return data;
+}
+
+export async function updateProfile(payload: Partial<{
+  full_name: string;
+  phone_number: string;
+  display_name: string;
+  photo_url: string;
+  bio: string;
+}>) {
+  const { data } = await api.patch('/auth/profile', payload);
+  return data;
+}
+
+export async function updatePrivacy(payload: Partial<{
+  public_profile_enabled: boolean;
+  show_email: boolean;
+  show_phone: boolean;
+}>) {
+  const { data } = await api.patch('/auth/profile/privacy', payload);
+  return data;
+}
+
+export async function updateNotificationPreferences(payload: Partial<{
+  email_task_reminders: boolean;
+  email_achievements: boolean;
+  email_streak_risk: boolean;
+  email_recommendations: boolean;
+}>) {
+  const { data } = await api.patch('/auth/profile/notification-preferences', payload);
+  return data;
+}
+
 // ---- PLANTS ----
 export async function getPlants() {
   const { data } = await api.get('/plants');
@@ -91,6 +138,16 @@ export async function getTodayTasks() {
 
 export async function completeTask(taskId: string, notes?: string) {
   const { data } = await api.post(`/tasks/${taskId}/complete`, { notes });
+  return data;
+}
+
+export async function snoozeTask(taskId: string, hours: number = 24) {
+  const { data } = await api.post(`/tasks/${taskId}/snooze?hours=${hours}`);
+  return data;
+}
+
+export async function rescheduleTask(taskId: string, dueDate: string) {
+  const { data } = await api.patch(`/tasks/${taskId}/reschedule?due_date=${encodeURIComponent(dueDate)}`);
   return data;
 }
 
@@ -146,6 +203,11 @@ export async function getUserStats() {
   return data;
 }
 
+export async function getMyLeaderboardEntry() {
+  const { data } = await api.get('/leaderboard/leaderboard/me');
+  return data;
+}
+
 // ---- NOTIFICATIONS ----
 export async function getNotifications(unreadOnly: boolean = false, limit: number = 50) {
   const { data } = await api.get(`/notifications/?unread_only=${unreadOnly}&limit=${limit}`);
@@ -164,6 +226,27 @@ export async function markAllNotificationsRead() {
 
 export async function deleteNotification(notificationId: string) {
   const { data } = await api.delete(`/notifications/${notificationId}`);
+  return data;
+}
+
+// ---- RECOMMENDATIONS ----
+export async function getRecommendations() {
+  const { data } = await api.get('/recommendations');
+  return data;
+}
+
+export async function generateRecommendations(count: number = 3) {
+  const { data } = await api.post(`/recommendations/generate?count=${count}`);
+  return data;
+}
+
+export async function acceptRecommendation(recId: string) {
+  const { data } = await api.post(`/recommendations/${recId}/accept`);
+  return data;
+}
+
+export async function dismissRecommendation(recId: string) {
+  const { data } = await api.post(`/recommendations/${recId}/dismiss`);
   return data;
 }
 

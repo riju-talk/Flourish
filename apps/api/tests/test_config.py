@@ -57,11 +57,17 @@ def test_fallback_secret_key():
     assert settings.SECRET_KEY == "change-this-secret-key-in-production"
 
 
-def test_ollama_defaults():
-    """Test OLLAMA default values"""
+def test_groq_defaults():
+    """Test Groq default values - Groq is the sole LLM backend, Ollama has been retired"""
     settings = Settings()
-    assert settings.OLLAMA_BASE_URL == "http://localhost:11434"
-    assert settings.OLLAMA_MODEL == "llama3"
+    assert settings.GROQ_MODEL == "llama-3.3-70b-versatile"
+    assert settings.GROQ_API_KEY == ""
+
+
+def test_tavily_api_key_default():
+    """Test TAVILY_API_KEY defaults to empty string"""
+    settings = Settings()
+    assert settings.TAVILY_API_KEY == ""
 
 
 def test_openweather_api_key_default():
@@ -70,10 +76,11 @@ def test_openweather_api_key_default():
     assert settings.OPENWEATHER_API_KEY == ""
 
 
-def test_firebase_service_account_key_from_env():
-    """Test FIREBASE_SERVICE_ACCOUNT_KEY reads from .env file"""
+def test_firebase_service_account_key_from_env(monkeypatch):
+    """Test FIREBASE_SERVICE_ACCOUNT_KEY reads from the environment"""
+    monkeypatch.setenv("FIREBASE_SERVICE_ACCOUNT_KEY", "some-test-key.json")
     settings = Settings()
-    assert settings.FIREBASE_SERVICE_ACCOUNT_KEY == "firebase-service-account.json"
+    assert settings.FIREBASE_SERVICE_ACCOUNT_KEY == "some-test-key.json"
 
 
 def test_firebase_service_account_key_fallback():

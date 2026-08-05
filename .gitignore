@@ -39,5 +39,6 @@ __pycache__/
 
 env/
 
-flourish-de908-firebase-adminsdk-fbsvc-c1de5df356.json
+flourish-de908-firebase-adminsdk-*.json
 firebase-service-account.json
+*firebase-adminsdk*.json

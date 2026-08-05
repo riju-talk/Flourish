@@ -1,5 +1,5 @@
 """
-Tests for service layer - mocks external dependencies (httpx, ollama, firebase)
+Tests for service layer - mocks external dependencies (httpx, groq, firebase)
 """
 import httpx
 import pytest

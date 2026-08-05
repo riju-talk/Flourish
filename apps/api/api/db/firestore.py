@@ -19,6 +19,9 @@ PLANTS_COLLECTION = "plants"
 TASKS_COLLECTION = "care_tasks"
 NOTIFICATIONS_COLLECTION = "notifications"
 HEALTH_CHECKS_COLLECTION = "health_checks"
+RECOMMENDATIONS_COLLECTION = "recommendations"
+EMAIL_LOGS_COLLECTION = "email_logs"
+MAIL_COLLECTION = "mail"
 
 class FirestoreDB:
     """Firestore database operations"""
@@ -47,50 +50,73 @@ class FirestoreDB:
             return None
     
     @staticmethod
-    async def create_profile(user_id: str, email: str, display_name: str = "", photo_url: str = "") -> Dict:
-        """Create user profile"""
+    async def create_profile(
+        user_id: str,
+        email: str,
+        display_name: str = "",
+        photo_url: str = "",
+        full_name: str = "",
+        phone_number: str = ""
+    ) -> Dict:
+        """Create user profile (onboarding). Privacy defaults to fully private."""
         try:
             profile_data = {
                 "email": email,
+                "full_name": full_name,
+                "phone_number": phone_number,
                 "display_name": display_name,
                 "photo_url": photo_url,
+                "bio": "",
                 "total_score": 0,
                 "level": 1,
                 "tasks_completed": 0,
                 "streak_days": 0,
                 "last_activity": None,
                 "achievements": [],
+                "privacy": {
+                    "public_profile_enabled": False,
+                    "show_email": False,
+                    "show_phone": False
+                },
+                "notification_preferences": {
+                    "email_task_reminders": True,
+                    "email_achievements": True,
+                    "email_streak_risk": True,
+                    "email_recommendations": False
+                },
+                "agent_profile": {
+                    "summary": "",
+                    "garden_composition": {},
+                    "care_habits": {},
+                    "recommendation_preferences": {"avoided_plants": [], "preferred_traits": []},
+                    "updated_at": None
+                },
                 "created_at": firestore.SERVER_TIMESTAMP,
                 "updated_at": firestore.SERVER_TIMESTAMP
             }
-            print(f"💾 Creating profile in Firestore for {user_id}")
-            print(f"📝 Profile data: {profile_data}")
             get_db().collection(PROFILES_COLLECTION).document(user_id).set(profile_data)
             profile_data['id'] = user_id
-            print(f"✅ Profile created successfully in collection: {PROFILES_COLLECTION}")
             return profile_data
         except Exception as e:
             print(f"❌ Error creating profile for {user_id}: {e}")
             raise
-    
+
     @staticmethod
     async def update_profile(user_id: str, updates: Dict) -> None:
         """Update user profile"""
         updates['updated_at'] = firestore.SERVER_TIMESTAMP
         get_db().collection(PROFILES_COLLECTION).document(user_id).update(updates)
-    
+
     @staticmethod
-    async def get_or_create_profile(user_id: str, email: str, display_name: str = "", photo_url: str = "") -> Dict:
-        """Get existing profile or create new one"""
-        print(f"🔍 Checking profile for user: {user_id}")
-        profile = await FirestoreDB.get_profile(user_id)
-        if not profile:
-            print(f"✨ Creating new profile for user: {user_id}")
-            profile = await FirestoreDB.create_profile(user_id, email, display_name, photo_url)
-            print(f"✅ Profile created: {profile}")
-        else:
-            print(f"✅ Profile exists: {profile}")
-        return profile
+    async def get_all_profiles() -> List[Dict]:
+        """Get every user profile - used by SchedulerService's per-user sweeps"""
+        docs = get_db().collection(PROFILES_COLLECTION).stream()
+        profiles = []
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            profiles.append(data)
+        return profiles
     
     # ============ PLANTS ============
     
@@ -269,6 +295,91 @@ class FirestoreDB:
             checks.append(data)
         return checks
     
+    # ============ RECOMMENDATIONS ============
+
+    @staticmethod
+    async def create_recommendation(rec_data: Dict) -> Dict:
+        """Create a personalized plant recommendation"""
+        rec_id = FirestoreDB.generate_id()
+        rec_data.update({
+            "id": rec_id,
+            "status": rec_data.get("status", "pending"),
+            "created_at": firestore.SERVER_TIMESTAMP
+        })
+        get_db().collection(RECOMMENDATIONS_COLLECTION).document(rec_id).set(rec_data)
+        return rec_data
+
+    @staticmethod
+    async def get_recommendation(rec_id: str) -> Optional[Dict]:
+        """Get a single recommendation"""
+        doc = get_db().collection(RECOMMENDATIONS_COLLECTION).document(rec_id).get()
+        if doc.exists:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            return data
+        return None
+
+    @staticmethod
+    async def get_user_recommendations(user_id: str, status: Optional[str] = None) -> List[Dict]:
+        """Get recommendations for a user, optionally filtered by status"""
+        query = get_db().collection(RECOMMENDATIONS_COLLECTION).where('user_id', '==', user_id)
+        docs = query.stream()
+        recommendations = []
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            if status is None or data.get('status') == status:
+                recommendations.append(data)
+        return recommendations
+
+    @staticmethod
+    async def update_recommendation(rec_id: str, updates: Dict) -> None:
+        """Update a recommendation"""
+        get_db().collection(RECOMMENDATIONS_COLLECTION).document(rec_id).update(updates)
+
+    # ============ EMAIL (mail + email_logs) ============
+
+    @staticmethod
+    async def enqueue_email(user_id: str, to_email: str, subject: str, html: str, email_type: str, trigger: str) -> Dict:
+        """
+        Write a document to the `mail` collection (consumed by the Firebase Trigger
+        Email extension) and a paired `email_logs` entry, per
+        docs/04-Rules-of-Engagement.md Rule 13.
+        """
+        mail_id = FirestoreDB.generate_id()
+        mail_data = {
+            "id": mail_id,
+            "to": [to_email],
+            "message": {"subject": subject, "html": html}
+        }
+        get_db().collection(MAIL_COLLECTION).document(mail_id).set(mail_data)
+
+        log_id = FirestoreDB.generate_id()
+        log_data = {
+            "id": log_id,
+            "user_id": user_id,
+            "type": email_type,
+            "subject": subject,
+            "trigger": trigger,
+            "mail_ref": mail_id,
+            "sent_at": firestore.SERVER_TIMESTAMP
+        }
+        get_db().collection(EMAIL_LOGS_COLLECTION).document(log_id).set(log_data)
+        return log_data
+
+    @staticmethod
+    async def get_user_email_logs(user_id: str, limit: int = 50) -> List[Dict]:
+        """Get this user's email send history"""
+        query = get_db().collection(EMAIL_LOGS_COLLECTION).where('user_id', '==', user_id)
+        query = query.order_by('sent_at', direction=firestore.Query.DESCENDING).limit(limit)
+        docs = query.stream()
+        logs = []
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            logs.append(data)
+        return logs
+
     # ============ LEADERBOARD ============
     
     @staticmethod

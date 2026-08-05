@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any, Optional
 from ..models.chat import ChatMessage, ChatResponse, ImageAnalysis
 from ..services.ai_service import AIService
-from ..services.ollama_service import OllamaService
+from ..services.groq_service import GroqService
 from ..services.weather_service import WeatherService
 from ..services.plant_service import PlantService
 from ..core.auth import verify_firebase_token
@@ -16,21 +16,11 @@ async def chat_with_ai(
     user_id: str = Depends(verify_firebase_token)
 ):
     """
-    Enhanced multi-modal chat with Ollama LLM
-    Supports context-aware plant care conversations
+    Agentic multi-modal chat via Groq (PlantMind)
+    Supports context-aware plant care conversations, grounded in the user's own garden
     """
     try:
-        # Build context from MCP if needed
-        mcp_context = None
-        last_message = messages[-1].content.lower() if messages else ""
-        
-        # Check if weather context is needed
-        if "weather" in last_message or "climate" in last_message:
-            # Could fetch weather data and add to context
-            mcp_context = "Current conditions: Use the MCP weather API for real-time data."
-        
-        # Use Ollama for chat
-        response = await OllamaService.chat_with_ai(messages, context=mcp_context or context)
+        response = await GroqService.chat_with_ai(messages, user_id=user_id, context=context)
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

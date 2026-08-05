@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm install --prefix apps/web && npm run build --prefix apps/web",
+  "outputDirectory": "apps/web/dist",
+  "installCommand": "echo skip-root-install",
+  "framework": null,
+  "rewrites": [
+    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+  ]
+}

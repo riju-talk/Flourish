@@ -12,7 +12,7 @@
 ✅ **Firebase Storage** (File uploads)  
 ✅ **Production Ready** (Security & documentation)
 
-**→ [Architecture Documentation](ARCHITECTURE.md)**
+**→ [Full documentation set](docs/)** — start with [`docs/01-PRD.md`](docs/01-PRD.md) and [`docs/02-Tech-Stack-Architecture.md`](docs/02-Tech-Stack-Architecture.md)
 
 ---
 
@@ -90,22 +90,8 @@ Flourish is built with modern, reliable technologies to ensure fast performance 
 - **Python 3.9+** - [Download](https://www.python.org/downloads/)
 - **Node.js 18+** - [Download](https://nodejs.org/)
 - **Firebase Account** - Project: `flourish-de908` (already configured)
-
-### One-Command Start (Windows)
-```bash
-# Using batch file (recommended)
-start.bat
-
-# Or using PowerShell
-.\start.ps1
-```
-
-This automated script will:
-- ✅ Check all dependencies
-- ✅ Install missing packages
-- ✅ Start backend API on port 8000
-- ✅ Start frontend on port 5173
-- ✅ Open the app in your browser
+- **Groq API key** - required, no local model fallback ([console.groq.com](https://console.groq.com))
+- **Tavily API key** - required for grounded recommendations ([tavily.com](https://tavily.com))
 
 ### NPM Scripts (Monorepo Management)
 
@@ -165,18 +151,18 @@ npm run dev
 ### First Time Setup
 
 1. **Firebase Configuration**
-   - Service account key is already configured at `apps/api/firebase-service-account.json`
-   - Environment variables are set in `.env` files
+   - Download the service-account key for `flourish-de908` and keep it **outside version
+     control** (it's git-ignored by filename pattern — see `.gitignore`).
+   - Point `FIREBASE_SERVICE_ACCOUNT_KEY` at it in `apps/api/.env` (relative to `apps/api`,
+     since that's uvicorn's working directory).
+   - Add `GROQ_API_KEY` and `TAVILY_API_KEY` to `apps/api/.env` — both required, see
+     `docs/02-Tech-Stack-Architecture.md` §6.
 
 2. **Sign In**
    - Go to http://localhost:5173
    - Click "Sign in with Google"
-   - Start managing your plants! 🌱
-
-3. **Optional: AI Features**
-   - Install [Ollama](https://ollama.ai) for local AI
-   - Run: `ollama pull llama3`
-   - Or use Groq API (add `GROQ_API_KEY` to `apps/api/.env`)
+   - First-time sign-in asks for your full name + phone number (onboarding), then
+     you're in — start managing your plants! 🌱
 
 ---
 
@@ -214,9 +200,11 @@ Flourish/
 │       │   ├── pages/         # App pages
 │       │   └── integrations/  # API client
 │       └── package.json       # Node dependencies
-├── ARCHITECTURE.md            # System architecture docs
-├── README.md                  # This file
-└── start.ps1                  # Development start script
+├── docs/                       # Full documentation set (PRD, architecture, schema, ...)
+├── .github/workflows/          # CI (ci.yml) + Render keep-alive ping (keep-alive.yml)
+├── render.yaml                 # Render deployment (backend)
+├── vercel.json                 # Vercel deployment (frontend)
+└── README.md                   # This file
 ```
 
 ---
@@ -243,6 +231,55 @@ This project uses **Firebase** for all backend services:
 - Profile photos: `users/{userId}/profile/`
 
 **Firebase Console:** https://console.firebase.google.com/project/flourish-de908
+
+---
+
+## 🚀 Deployment
+
+Frontend → **Vercel**, backend → **Render**, both already have config files in this
+repo (`vercel.json`, `render.yaml`). You said you already have accounts for both, so
+this is the short version - full detail in `docs/02-Tech-Stack-Architecture.md` §6.
+
+### Backend (Render)
+1. New Web Service → connect this repo. Render will read `render.yaml` (root
+   directory `apps/api`, Python 3.12, health check `/health`).
+2. **Secret Files** tab → upload the Firebase service-account JSON.
+3. **Environment** tab → set the `sync: false` vars from `render.yaml`:
+   `ALLOWED_ORIGINS` (your Vercel URL), `GROQ_API_KEY`, `TAVILY_API_KEY`,
+   `OPENWEATHER_API_KEY`, `PLANT_ID_API_KEY`, `UNSPLASH_ACCESS_KEY`, and
+   `FIREBASE_SERVICE_ACCOUNT_KEY` = the mounted Secret File path (Render shows this
+   after upload, typically `/etc/secrets/<filename>`).
+4. Deploy. Confirm `GET https://<your-service>.onrender.com/health` returns `{"status":"ok"}`.
+
+### Frontend (Vercel)
+1. New Project → import this repo. `vercel.json` at the repo root handles the
+   monorepo build (`apps/web` → `apps/web/dist`) and SPA rewrites - no need to set a
+   Root Directory.
+2. **Environment Variables** → copy every `VITE_*` key from `apps/web/.env`, plus set
+   `VITE_API_URL` and `VITE_WS_URL` (`wss://...`) to your Render URL.
+3. Deploy.
+4. Back in Render, update `ALLOWED_ORIGINS` to include the resulting Vercel domain,
+   then redeploy the backend so CORS allows it.
+
+### Keep the backend from sleeping
+Render's free tier spins down after ~15 minutes idle. `.github/workflows/keep-alive.yml`
+pings `/health` every 10 minutes to prevent that (and to keep the in-process
+`SchedulerService` jobs firing reliably). After the backend is deployed:
+1. Repo → Settings → Secrets and variables → Actions → **Variables** tab.
+2. Add `RENDER_API_URL` = `https://<your-service>.onrender.com`.
+3. The workflow picks it up on its next scheduled run (or trigger it manually from the Actions tab).
+
+### Email (Firebase Trigger Email extension)
+`firebase.json` / `.firebaserc` / `extensions/firestore-send-email.env` are already in
+the repo. To actually enable sending:
+1. `firebase login`, then from the repo root: `firebase ext:install firebase/firestore-send-email --project=flourish-de908`
+2. When prompted, provide your SMTP connection URI and password (stored in Secret
+   Manager, never written to the repo) - Gmail/Workspace SMTP or a transactional
+   provider both work.
+3. `firebase deploy --only extensions`
+
+Without this step, `EmailService` still writes to the `mail` collection correctly -
+the documents just won't be picked up and sent until the extension is installed.
 
 ---
 

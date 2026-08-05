@@ -1,0 +1,23 @@
+name: Keep Render backend warm
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    name: Ping /health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check RENDER_API_URL is configured
+        run: |
+          if [ -z "${{ vars.RENDER_API_URL }}" ]; then
+            echo "RENDER_API_URL repo variable is not set - skipping ping. Set it under Settings > Secrets and variables > Actions > Variables once the backend is deployed."
+            exit 0
+          fi
+
+      - name: Ping backend health endpoint
+        if: vars.RENDER_API_URL != ''
+        run: |
+          curl -fsS --max-time 20 "${{ vars.RENDER_API_URL }}/health" || echo "Ping failed - backend may be cold-starting or down."

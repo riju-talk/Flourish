@@ -6,6 +6,7 @@ import {
   onAuthStateChanged,
   User as FirebaseUser
 } from "firebase/auth";
+import { getProfile, createProfile } from '@/integrations/api';
 
 interface User {
   uid: string;
@@ -15,19 +16,61 @@ interface User {
   idToken?: string;
 }
 
+export interface Profile {
+  id: string;
+  email: string;
+  full_name?: string;
+  phone_number?: string;
+  display_name?: string;
+  photo_url?: string;
+  bio?: string;
+  total_score: number;
+  level: number;
+  tasks_completed: number;
+  streak_days: number;
+  achievements: string[];
+  privacy?: {
+    public_profile_enabled: boolean;
+    show_email: boolean;
+    show_phone: boolean;
+  };
+  notification_preferences?: Record<string, boolean>;
+}
+
 interface AuthContextType {
   user: User | null;
+  profile: Profile | null;
   loading: boolean;
+  needsOnboarding: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   getIdToken: () => Promise<string | null>;
+  completeOnboarding: (fullName: string, phoneNumber: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const loadProfile = async () => {
+    try {
+      const existing = await getProfile();
+      setProfile(existing);
+      setNeedsOnboarding(false);
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        setProfile(null);
+        setNeedsOnboarding(true);
+      } else {
+        console.error('Failed to load profile:', error);
+      }
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
@@ -40,50 +83,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           photoURL: firebaseUser.photoURL || '',
           idToken
         };
-        
+
         setUser(mappedUser);
         localStorage.setItem('flourish_user', JSON.stringify(mappedUser));
         localStorage.setItem('flourish_token', idToken);
-        
-        // Create user profile in database on sign in
-        try {
-          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/auth/profile`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${idToken}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              email: firebaseUser.email,
-              display_name: firebaseUser.displayName || '',
-              photo_url: firebaseUser.photoURL || ''
-            })
-          });
-          
-          if (response.ok) {
-            const profileData = await response.json();
-            console.log('='.repeat(60));
-            console.log('👤 ACCOUNT CREATED/UPDATED IN DATABASE');
-            console.log('='.repeat(60));
-            console.log('🆔 User ID:', profileData.id);
-            console.log('📧 Email:', profileData.email);
-            console.log('👤 Display Name:', profileData.display_name);
-            console.log('🖼️  Photo URL:', profileData.photo_url);
-            console.log('🎯 Level:', profileData.level);
-            console.log('⭐ Total Score:', profileData.total_score);
-            console.log('🏆 Tasks Completed:', profileData.tasks_completed);
-            console.log('🔥 Streak Days:', profileData.streak_days);
-            console.log('🏅 Achievements:', profileData.achievements);
-            console.log('='.repeat(60));
-          } else {
-            const errorText = await response.text();
-            console.error('❌ Profile creation failed:', response.status, errorText);
-          }
-        } catch (error) {
-          console.error('❌ Profile creation error:', error);
-        }
+
+        await loadProfile();
       } else {
         setUser(null);
+        setProfile(null);
+        setNeedsOnboarding(false);
         localStorage.removeItem('flourish_user');
         localStorage.removeItem('flourish_token');
       }
@@ -124,8 +133,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return localStorage.getItem('flourish_token');
   };
 
+  const completeOnboarding = async (fullName: string, phoneNumber: string) => {
+    if (!user) {
+      throw new Error('Not signed in');
+    }
+    const created = await createProfile({
+      email: user.email,
+      display_name: user.displayName || '',
+      photo_url: user.photoURL || '',
+      full_name: fullName,
+      phone_number: phoneNumber
+    });
+    setProfile(created);
+    setNeedsOnboarding(false);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut, getIdToken }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        loading,
+        needsOnboarding,
+        signInWithGoogle,
+        signOut,
+        getIdToken,
+        completeOnboarding,
+        refreshProfile: loadProfile
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

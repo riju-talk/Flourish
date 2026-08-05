@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
-from ..services.ollama_service import OllamaService
+from ..services.groq_service import GroqService
 from ..core.auth import verify_firebase_token
 import PyPDF2
 import io
@@ -54,8 +54,8 @@ async def analyze_document(
         if not extracted_text or len(extracted_text.strip()) < 10:
             raise HTTPException(status_code=400, detail="No text could be extracted from the document")
         
-        # Use Ollama to analyze the extracted text
-        analysis = await OllamaService.analyze_document(extracted_text, "care_guide")
+        # Analyze the extracted text
+        analysis = await GroqService.analyze_document(extracted_text, "care_guide")
         
         return {
             "success": True,
@@ -86,7 +86,7 @@ async def analyze_text(
         if len(text.strip()) < 10:
             raise HTTPException(status_code=400, detail="Text too short for analysis")
         
-        analysis = await OllamaService.analyze_document(text, "care_guide")
+        analysis = await GroqService.analyze_document(text, "care_guide")
         
         return {
             "success": True,

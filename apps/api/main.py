@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import plants, dashboard, chat, tasks, images, mcp, documents, notifications, leaderboard, storage, auth
+from api.routes import plants, dashboard, chat, tasks, images, mcp, documents, notifications, leaderboard, storage, auth, recommendations
 from api.core.config import settings
 from api.core.auth import verify_firebase_token
+from api.services.scheduler_service import start_scheduler, stop_scheduler
 
 # Initialize FastAPI
 app = FastAPI(
@@ -27,6 +28,11 @@ async def startup_event():
     print("Starting Flourish API...")
     print("Firebase Firestore ready!")
     print("No database setup needed - using Firebase!")
+    start_scheduler()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    stop_scheduler()
 
 # Include routers with authentication dependency
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])  # No auth required for profile creation
@@ -40,6 +46,7 @@ app.include_router(documents.router, prefix="/api/documents", tags=["documents"]
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["leaderboard"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(storage.router, prefix="/api/storage", tags=["storage"], dependencies=[Depends(verify_firebase_token)])
+app.include_router(recommendations.router, prefix="/api/recommendations", tags=["recommendations"], dependencies=[Depends(verify_firebase_token)])
 
 @app.get("/")
 async def root():
