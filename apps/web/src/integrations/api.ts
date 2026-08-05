@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { auth } from '@/lib/firebase';
 
 // API base URL - use environment variable or default to localhost
 // Always append /api to the base URL for API routes
@@ -12,12 +13,29 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add Firebase auth token
+// Request interceptor to add a fresh Firebase auth token. Firebase ID tokens expire
+// after ~1 hour; getIdToken() returns the cached token when it's still valid and
+// transparently refreshes it when it's not, so calling it per-request is cheap and
+// keeps every API call authenticated for as long as the user stays signed in.
+// Falls back to the last-known token in localStorage for the brief window before
+// Firebase's auth state has hydrated.
 api.interceptors.request.use(
   async (config) => {
-    const token = localStorage.getItem('flourish_token');
+    let token: string | null = null;
+
+    if (auth.currentUser) {
+      try {
+        token = await auth.currentUser.getIdToken();
+      } catch {
+        token = localStorage.getItem('flourish_token');
+      }
+    } else {
+      token = localStorage.getItem('flourish_token');
+    }
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      localStorage.setItem('flourish_token', token);
     }
     return config;
   },
@@ -174,21 +192,6 @@ export async function getPlantImage(plantName: string, species: string = '') {
 // Generate tasks for a plant
 export async function generateTasksForPlant(plantId: string) {
   const { data } = await api.post(`/tasks/generate/${plantId}`);
-  return data;
-}
-
-// ---- DOCUMENTS ----
-export async function analyzeDocument(file: File) {
-  const formData = new FormData();
-  formData.append('file', file);
-  const { data } = await api.post('/documents/analyze-document', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
-  return data;
-}
-
-export async function analyzeText(text: string) {
-  const { data } = await api.post('/documents/analyze-text', { text });
   return data;
 }
 

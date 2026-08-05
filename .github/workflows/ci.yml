@@ -63,5 +63,4 @@ jobs:
         run: |
           python -m pytest -v --cov=api --cov-report=term-missing
         env:
-          FIREBASE_SERVICE_ACCOUNT_KEY: ""
           SECRET_KEY: "ci-test-key"

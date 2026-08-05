@@ -1,0 +1,15 @@
+# Applies to the whole build context (Dockerfile build is run from the repo root)
+node_modules
+apps/web/node_modules
+apps/web/dist
+apps/api/.venv
+apps/api/venv
+apps/api/__pycache__
+apps/api/**/__pycache__
+apps/api/.pytest_cache
+apps/api/.env
+.git
+.github
+docs
+*.md
+flourish-de908-firebase-adminsdk-*.json

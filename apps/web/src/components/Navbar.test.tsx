@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Navbar } from './Navbar';
 
@@ -10,6 +11,9 @@ vi.mock('@/hooks/useAuth', () => ({
       email: 'test@test.com',
       displayName: 'Test User',
       photoURL: 'https://example.com/photo.jpg',
+    },
+    profile: {
+      full_name: 'Test User',
     },
     loading: false,
     signInWithGoogle: vi.fn(),
@@ -43,13 +47,16 @@ describe('Navbar', () => {
     expect(avatar).toHaveAttribute('src', 'https://example.com/photo.jpg');
   });
 
-  it('shows sign out button', () => {
+  it('shows sign out option in the account menu', async () => {
+    const user = userEvent.setup();
     render(
       <MemoryRouter>
         <Navbar />
       </MemoryRouter>
     );
-    expect(screen.getByText('Sign Out')).toBeInTheDocument();
+
+    await user.click(screen.getByAltText('User Avatar'));
+    expect(await screen.findByText('Sign Out')).toBeInTheDocument();
   });
 
   it('renders navigation links', () => {
@@ -59,10 +66,10 @@ describe('Navbar', () => {
       </MemoryRouter>
     );
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
-    expect(screen.getByText('AI Chat')).toBeInTheDocument();
-    expect(screen.getByText('Plant Lookup')).toBeInTheDocument();
+    expect(screen.getByText('AI Assistant')).toBeInTheDocument();
+    expect(screen.getByText('Explore')).toBeInTheDocument();
     expect(screen.getByText('Calendar')).toBeInTheDocument();
-    expect(screen.getByText('Documents')).toBeInTheDocument();
+    expect(screen.getByText('For You')).toBeInTheDocument();
     expect(screen.getByText('Leaderboard')).toBeInTheDocument();
   });
 

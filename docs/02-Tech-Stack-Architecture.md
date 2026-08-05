@@ -42,13 +42,12 @@
 | Auth | Firebase Admin (verify ID tokens) |
 | DB | Cloud Firestore (via `firebase-admin`) |
 | Storage | Firebase Cloud Storage |
-| LLM | **Groq** via **LangChain** (`langchain-groq` + `langgraph` tool-calling agent) — sole LLM backend (chat, agentic lookup, document analysis, recommendations). Ollama has been retired; there is no local-model fallback. |
+| LLM | **Groq** via **LangChain** (`langchain-groq` + `langchain.agents` tool-calling agent — plain LangChain, no LangGraph) — sole LLM backend (chat, agentic lookup, recommendations). Ollama has been retired; there is no local-model fallback. |
 | Agent tools | **Tavily** (web search, via `langchain-tavily`), **OpenWeatherMap** (weather), internal Firestore reads — wired as LangChain `@tool`s bound per-request to the calling user |
 | QA | Real **MCP server** (`mcp_server.py`, official `mcp` SDK + FastMCP) exposing agentic QA tools against a running instance — separate from the `/api/mcp` REST routes below, which just reuse the "MCP" label |
 | Images | **Unsplash** — fetches a representative photo for a plant by name/species; used for `plants.image_url` on add/lookup and for `recommendations.image_url` |
 | Email | Firebase **Trigger Email** extension (Firestore-triggered via a `mail` collection), plus an in-process scheduler for automated sends (see §5) |
 | External | OpenWeatherMap, Unsplash, Plant.ID, Tavily (optional/required keys — see §6) |
-| Docs | PDF via PyPDF2, image via Pillow, OCR optional (tesseract) |
 | Tests | pytest + pytest-cov |
 
 ### Firebase — Project `flourish-de908`
@@ -90,7 +89,7 @@ exact steps.
 │     FastAPI Backend :8000   │
 │  routes/ (auth, plants,     │
 │  tasks, dashboard, chat,    │
-│  documents, images, mcp,    │
+│  images, mcp,               │
 │  notifications, leaderboard,│
 │  recommendations, storage)  │
 │  services/ (Groq agent,     │
@@ -170,7 +169,7 @@ Flourish/
 │   │   │   ├── core/               # auth.py, config.py
 │   │   │   ├── db/                 # firestore.py, storage.py, session.py (empty)
 │   │   │   ├── models/             # plant.py, task.py, chat.py, db_models.py (legacy)
-│   │   │   ├── routes/             # plants, tasks, dashboard, chat, documents,
+│   │   │   ├── routes/             # plants, tasks, dashboard, chat,
 │   │   │   │                       # images, mcp, notifications, leaderboard,
 │   │   │   │                       # recommendations, storage, auth
 │   │   │   └── services/           # groq_service, plant_service (Unsplash),
@@ -181,11 +180,11 @@ Flourish/
 │   └── web/                        # React frontend
 │       └── src/
 │           ├── pages/              # Index, Auth, Onboarding, Chat, Calendar,
-│           │                       # Leaderboard, PlantLookup, Documents,
-│           │                       # Recommendations, Settings, NotFound
+│           │                       # Leaderboard, PlantLookup, Recommendations,
+│           │                       # Settings, NotFound
 │           ├── components/         # PlantCard, DailyChecklist, LeaderboardPreview,
 │           │                       # AddPlantDialog/Form, Navbar, CareCalendar,
-│           │                       # ScheduleCalendar, Chat, AIAssistant, DocumentAnalyzer,
+│           │                       # ScheduleCalendar, Chat, AIAssistant,
 │           │                       # PlantLookup, RecommendationCard, NotificationCenter,
 │           │                       # PrivacySettings, ErrorBoundary, ui/ (shadcn primitives)
 │           ├── hooks/              # useAuth.tsx, use-mobile, use-toast
@@ -269,13 +268,7 @@ request to `/api/auth/profile` requires a valid Firebase token**.
 | POST | `/` | Agentic multi-modal chat (Groq) + tool calls + follow-up suggestions |
 | POST | `/analyze-image` | Image health analysis (currently mocked) |
 | GET | `/weather/{lat}/{lon}` | Weather for a location |
-| POST | `/care-plan` | ⚠️ Broken — calls non-existent `AIService.generate_care_plan`, returns 500 (repair scheduled) |
-
-### Documents — `/api/documents`
-| Method | Path | Purpose |
-|---|---|---|
-| POST | `/analyze-document` | Upload PDF/TXT → extract → AI care info |
-| POST | `/analyze-text` | Same analysis on raw text |
+| POST | `/care-plan` | Generates a structured care plan from the plant's profile, adjusted for current weather |
 
 ### Images — `/api/images`
 | Method | Path | Purpose |
@@ -344,14 +337,15 @@ request to `/api/auth/profile` requires a valid Firebase token**.
 **Live & wired to routes:**
 - **GroqService** (`groq_service.py`, replaces the retired `ollama_service.py`) — chat +
   context-aware follow-up suggestions, plant health analysis, agentic plant info lookup,
-  document analysis, and personalized recommendations. `chat_with_ai` builds a
-  `langgraph.prebuilt.create_react_agent` per request over four LangChain `@tool`s bound
-  to the calling `user_id` (`get_user_garden`, `get_task_history`, `get_weather`,
-  `web_search`), capped via `recursion_limit` so the reason → tool-call → observe →
-  answer loop stays bounded. The structured-extraction methods (`analyze_plant_health`,
-  `get_plant_info_agentic`, `analyze_document`) call `ChatGroq` directly in JSON mode —
-  no tools needed there. Graceful fallback responses on errors/Groq-down (there is no
-  local-model fallback anymore).
+  and personalized recommendations. `chat_with_ai` builds a
+  `langchain.agents.AgentExecutor` (via `create_tool_calling_agent`) per request over
+  four LangChain `@tool`s bound to the calling `user_id` (`get_user_garden`,
+  `get_task_history`, `get_weather`, `web_search`), capped via `max_iterations` so the
+  reason → tool-call → observe → answer loop stays bounded. Plain LangChain only — no
+  LangGraph anywhere in this codebase. The structured-extraction methods (`analyze_plant_health`,
+  `get_plant_info_agentic`) call `ChatGroq` directly in JSON mode — no tools needed
+  there. Graceful fallback responses on errors/Groq-down (there is no local-model
+  fallback anymore).
 - **TavilyService** (`tavily_service.py`) — thin wrapper around `langchain-tavily`'s
   `TavilySearch`, used as the agent's `web_search` tool for grounded, current
   information (recommendations, fact-checking care advice).
@@ -359,9 +353,15 @@ request to `/api/auth/profile` requires a valid Firebase token**.
   returns mock data when no key or on error.
 - **PlantService** (`plant_service.py`) — Unsplash image fetch, used for both
   `plants.image_url` and `recommendations.image_url` when a plant is added to the
-  garden. Reads `UNSPLASH_ACCESS_KEY` from settings; falls back to Unsplash's public
-  `demo` client ID (heavily rate-limited) when the key is blank, and to a static
-  Unsplash URL if the request fails outright. Defines an unused `generate_care_schedule`.
+  garden. Reads `UNSPLASH_ACCESS_KEY` from settings (sent as `client_id`); falls back
+  to Unsplash's public `demo` client ID (heavily rate-limited) when the key is blank,
+  and to a static Unsplash URL if the request fails outright. Also pings each photo's
+  `download_location` after a successful fetch, per Unsplash's API Guidelines
+  ("track a photo download" — required whenever a fetched photo is actually used, not
+  just searched). `UNSPLASH_APPLICATION_ID` and `UNSPLASH_SECRET_KEY` are read into
+  settings but not sent on any request — Unsplash's public search endpoint only needs
+  the Access Key; the other two matter only for an OAuth flow this app doesn't do.
+  Defines an unused `generate_care_schedule`.
 - **EmailService** (`email_service.py`) — writes documents to the Firestore `mail`
   collection consumed by the Firebase Trigger Email extension, **and** writes the
   paired `email_logs` entry for every send, whether event- or schedule-triggered.
@@ -410,19 +410,22 @@ backend via `FLOURISH_API_BASE_URL` (defaults to `http://localhost:8000`).
 | Variable | Default | Used by |
 |---|---|---|
 | `ALLOWED_ORIGINS` | localhost dev origins | CORS |
-| `GROQ_API_KEY` | "" | **Required.** GroqService — chat, lookup, documents, recommendations |
-| `GROQ_MODEL` | `llama-3.3-70b-versatile` | GroqService — model used for both the tool-calling agent and structured extraction |
+| `GROQ_API_KEY` | "" | **Required.** GroqService — chat, lookup, recommendations |
+| `GROQ_MODEL` | `qwen/qwen3.6-27b` | GroqService — model used for both the tool-calling agent and structured extraction (LLM backbone) |
 | `TAVILY_API_KEY` | "" | **Required for grounded recommendations.** GroqService web-search tool |
-| `UNSPLASH_ACCESS_KEY` | "" | declared (code uses placeholder) |
+| `UNSPLASH_APPLICATION_ID` | "" | PlantService — captured, not sent on any request (see §5) |
+| `UNSPLASH_ACCESS_KEY` | "" | PlantService — sent as `client_id`; falls back to the rate-limited public `demo` ID when blank |
+| `UNSPLASH_SECRET_KEY` | "" | PlantService — captured, not sent on any request (see §5) |
 | `PLANT_ID_API_KEY` | "" | PlantIDService (unwired) |
 | `OPENWEATHER_API_KEY` | "" | WeatherService |
-| `FIREBASE_SERVICE_ACCOUNT_KEY` | "" | Firebase Admin init — local relative path to the downloaded JSON key |
+| `FIREBASE_PROJECT_ID` / `_PRIVATE_KEY_ID` / `_PRIVATE_KEY` / `_CLIENT_EMAIL` / `_CLIENT_ID` / `_CLIENT_X509_CERT_URL` | "" | Firebase Admin init — individual service-account fields, **no JSON key file anywhere**; lazily initialized on first authenticated request, not at import time (see `core/auth.py`). `FIREBASE_TYPE`, `_AUTH_URI`, `_TOKEN_URI`, `_AUTH_PROVIDER_X509_CERT_URL`, `_UNIVERSE_DOMAIN` default to the standard Google values and rarely need overriding. |
 | `SECRET_KEY` | placeholder | unused (Firebase auth) |
 
-> The Firebase service-account JSON must never be committed — it's git-ignored by
-> pattern (see `.gitignore` and `04-Rules-of-Engagement.md` Rule 5). Deployment-specific
-> secret handling (Render Secret Files, etc.) is intentionally out of scope until the
-> deployment phase — see §1.
+> Never commit real values for the `FIREBASE_*` fields (see `04-Rules-of-Engagement.md`
+> Rule 5) — `apps/api/.env` is git-ignored. `FIREBASE_PRIVATE_KEY` must keep its
+> literal `\n` line breaks (wrap the value in double quotes in `.env`); pydantic-settings
+> converts them to real newlines when loading. On Render these are set directly as
+> environment variables — no Secret File needed.
 
 ### Frontend `apps/web/.env`
 | Variable | Purpose |

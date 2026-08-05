@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { Leaf } from "lucide-react";
+import { SplashScreen } from "@/components/SplashScreen";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -12,7 +12,6 @@ import Chat from "./pages/Chat";
 import CalendarPage from "./pages/Calendar";
 import LeaderboardPage from "./pages/Leaderboard";
 import PlantLookupPage from "./pages/PlantLookup";
-import DocumentsPage from "./pages/Documents";
 import RecommendationsPage from "./pages/Recommendations";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -23,16 +22,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, needsOnboarding } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-20 h-20 vibrant-gradient rounded-3xl flex items-center justify-center mx-auto mb-6 animate-bounce shadow-2xl">
-            <Leaf className="text-white" size={40} />
-          </div>
-          <p className="text-primary font-bold text-xl tracking-tight">Flourishing...</p>
-        </div>
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   if (!user) {
@@ -50,16 +40,7 @@ const OnboardingRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, needsOnboarding } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-20 h-20 vibrant-gradient rounded-3xl flex items-center justify-center mx-auto mb-6 animate-bounce shadow-2xl">
-            <Leaf className="text-white" size={40} />
-          </div>
-          <p className="text-primary font-bold text-xl tracking-tight">Flourishing...</p>
-        </div>
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   if (!user) {
@@ -77,16 +58,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-20 h-20 vibrant-gradient rounded-3xl flex items-center justify-center mx-auto mb-6 animate-bounce shadow-2xl">
-            <Leaf className="text-white" size={40} />
-          </div>
-          <p className="text-primary font-bold text-xl tracking-tight">Flourishing...</p>
-        </div>
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   if (user) {
@@ -142,14 +114,6 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <PlantLookupPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/documents"
-                element={
-                  <ProtectedRoute>
-                    <DocumentsPage />
                   </ProtectedRoute>
                 }
               />

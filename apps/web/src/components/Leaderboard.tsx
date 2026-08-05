@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trophy, Medal, Award, TrendingUp, Mail, Phone } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Trophy, Mail, Phone, Flame } from 'lucide-react';
 import { getLeaderboard, getUserStats } from '@/integrations/api';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -33,13 +34,16 @@ interface UserStats {
   };
   stats: {
     rank: number;
-    total_tasks: number;
     completed_tasks: number;
-    pending_tasks: number;
-    overdue_tasks: number;
     completion_rate: number;
   };
 }
+
+const PODIUM_STYLE: Record<number, { ring: string; badge: string }> = {
+  1: { ring: 'ring-amber-300', badge: 'bg-amber-500' },
+  2: { ring: 'ring-slate-300', badge: 'bg-slate-400' },
+  3: { ring: 'ring-orange-300', badge: 'bg-orange-500' },
+};
 
 export default function Leaderboard() {
   const { user } = useAuth();
@@ -51,6 +55,7 @@ export default function Leaderboard() {
   useEffect(() => {
     fetchLeaderboard();
     fetchUserStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
   const fetchLeaderboard = async () => {
@@ -93,10 +98,7 @@ export default function Leaderboard() {
         },
         stats: {
           rank: stats.rank || 0,
-          total_tasks: (stats.tasks_completed || 0) + (stats.completion_rate ? Math.round((stats.tasks_completed || 0) * 100 / stats.completion_rate - (stats.tasks_completed || 0)) : 0),
           completed_tasks: stats.tasks_completed || 0,
-          pending_tasks: 0,
-          overdue_tasks: 0,
           completion_rate: stats.completion_rate || 0,
         },
       });
@@ -105,144 +107,165 @@ export default function Leaderboard() {
     }
   };
 
-  const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="h-6 w-6 text-yellow-500" />;
-    if (rank === 2) return <Medal className="h-6 w-6 text-gray-400" />;
-    if (rank === 3) return <Medal className="h-6 w-6 text-amber-600" />;
-    return <span className="text-lg font-bold text-muted-foreground">#{rank}</span>;
-  };
+  const podium = leaderboard.slice(0, 3);
+  const rest = leaderboard.slice(3);
+  const levelProgress = userStats ? userStats.profile.total_score % 1000 / 10 : 0;
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">🏆 Leaderboard</h1>
+    <div className="container mx-auto px-4 py-8 space-y-10">
+      <div>
+        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">
+          Community Rankings
+        </p>
+        <h1 className="font-serif text-4xl md:text-5xl font-semibold text-foreground">
+          Top Plant Parents
+        </h1>
+        <p className="text-muted-foreground mt-3 max-w-2xl">
+          Celebrate the dedication of our top cultivators — a deep well of botanical
+          wisdom and exceptional care routines.
+        </p>
       </div>
 
-      {/* User Stats Card */}
-      {userStats && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Stats</CardTitle>
-            <CardDescription>Your plant care journey</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{userStats.stats.rank}</p>
-                <p className="text-sm text-muted-foreground">Global Rank</p>
+      {/* Podium */}
+      {!loading && podium.length >= 3 && (
+        <div className="grid grid-cols-3 gap-4 md:gap-6 items-end max-w-3xl mx-auto">
+          {[podium[1], podium[0], podium[2]].map((entry, idx) => {
+            const isFirst = entry.rank === 1;
+            const style = PODIUM_STYLE[entry.rank] || PODIUM_STYLE[3];
+            return (
+              <div
+                key={entry.user_id}
+                className={`glass-card p-5 flex flex-col items-center text-center gap-2 ${isFirst ? 'py-8 order-2' : `pt-8 ${idx === 0 ? 'order-1' : 'order-3'}`}`}
+              >
+                <Badge className={`${style.badge} text-white border-none mb-1`}>
+                  Rank {entry.rank}
+                </Badge>
+                <Avatar className={`ring-4 ${style.ring} ${isFirst ? 'w-20 h-20' : 'w-14 h-14'}`}>
+                  <AvatarImage src={entry.photo_url} alt={entry.display_name} />
+                  <AvatarFallback>{entry.display_name.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <p className={`font-serif font-semibold ${isFirst ? 'text-lg' : 'text-sm'}`}>{entry.display_name}</p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Flame size={12} className="text-orange-500" /> {entry.streak} day streak
+                </div>
+                <p className="font-bold text-primary">{entry.score.toLocaleString()} XP</p>
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{userStats.profile.total_score}</p>
-                <p className="text-sm text-muted-foreground">Total Points</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{userStats.profile.level}</p>
-                <p className="text-sm text-muted-foreground">Level</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{userStats.profile.streak_days} 🔥</p>
-                <p className="text-sm text-muted-foreground">Day Streak</p>
-              </div>
-            </div>
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <p className="text-lg font-semibold">{userStats.stats.completed_tasks}</p>
-                <p className="text-xs text-muted-foreground">Completed</p>
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-semibold">{userStats.stats.pending_tasks}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-semibold">{userStats.stats.overdue_tasks}</p>
-                <p className="text-xs text-muted-foreground">Overdue</p>
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-semibold">{userStats.stats.completion_rate}%</p>
-                <p className="text-xs text-muted-foreground">Success Rate</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            );
+          })}
+        </div>
       )}
 
-      {/* Leaderboard */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Top Plant Parents</CardTitle>
-          <CardDescription>See who's leading the plant care game</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={period} onValueChange={(v) => setPeriod(v as any)}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="all_time">All Time</TabsTrigger>
-              <TabsTrigger value="monthly">This Month</TabsTrigger>
-              <TabsTrigger value="weekly">This Week</TabsTrigger>
-            </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Global Rankings */}
+        <div className="lg:col-span-8 glass-card p-6 space-y-5">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h2 className="font-serif text-xl font-semibold flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-primary" /> Global Rankings
+            </h2>
+            <Tabs value={period} onValueChange={(v) => setPeriod(v as any)}>
+              <TabsList>
+                <TabsTrigger value="weekly">This Week</TabsTrigger>
+                <TabsTrigger value="monthly">This Month</TabsTrigger>
+                <TabsTrigger value="all_time">All Time</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
 
-            <TabsContent value={period} className="space-y-2 mt-4">
-              {loading ? (
-                <p className="text-center text-muted-foreground">Loading leaderboard...</p>
-              ) : leaderboard.length === 0 ? (
-                <p className="text-center text-muted-foreground">No data available yet</p>
-              ) : (
-                leaderboard.map((entry) => (
-                  <div
-                    key={entry.user_id}
-                    className={`flex items-center justify-between p-4 rounded-lg border ${
-                      entry.is_current_user ? 'bg-primary/5 border-primary' : 'bg-background'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 flex items-center justify-center">
-                        {getRankIcon(entry.rank)}
-                      </div>
-                      <Avatar>
-                        <AvatarImage src={entry.photo_url} alt={entry.display_name} />
-                        <AvatarFallback>{entry.display_name.charAt(0).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-semibold">
-                          {entry.display_name}
-                          {entry.is_current_user && (
-                            <Badge variant="secondary" className="ml-2">
-                              You
-                            </Badge>
-                          )}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Level {entry.level} • {entry.tasks_completed} tasks
-                        </p>
-                        {(entry.email || entry.phone_number) && (
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                            {entry.email && (
-                              <span className="flex items-center gap-1">
-                                <Mail className="h-3 w-3" /> {entry.email}
-                              </span>
-                            )}
-                            {entry.phone_number && (
-                              <span className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" /> {entry.phone_number}
-                              </span>
-                            )}
-                          </div>
+          <div className="space-y-2">
+            {loading ? (
+              <p className="text-center text-muted-foreground py-8">Loading leaderboard...</p>
+            ) : leaderboard.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">Be the first to bloom!</p>
+            ) : (
+              (rest.length > 0 ? rest : leaderboard).map((entry) => (
+                <div
+                  key={entry.user_id}
+                  className={`flex items-center justify-between p-3 rounded-xl transition-colors ${
+                    entry.is_current_user ? 'bg-accent' : 'hover:bg-secondary/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <span className="w-6 text-center text-sm font-semibold text-muted-foreground">
+                      {entry.rank}
+                    </span>
+                    <Avatar className="w-9 h-9">
+                      <AvatarImage src={entry.photo_url} alt={entry.display_name} />
+                      <AvatarFallback>{entry.display_name.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium text-sm">
+                        {entry.display_name}
+                        {entry.is_current_user && (
+                          <Badge variant="secondary" className="ml-2">You</Badge>
                         )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-primary">{entry.score}</p>
-                      <p className="text-xs text-muted-foreground">points</p>
-                      {entry.streak > 0 && (
-                        <p className="text-sm">🔥 {entry.streak} day streak</p>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Level {entry.level} · {entry.streak} day streak
+                      </p>
+                      {(entry.email || entry.phone_number) && (
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                          {entry.email && (
+                            <span className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" /> {entry.email}
+                            </span>
+                          )}
+                          {entry.phone_number && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" /> {entry.phone_number}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
-                ))
-              )}
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                  <span className="font-semibold text-sm text-primary">{entry.score.toLocaleString()}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Your Ranking */}
+        <div className="lg:col-span-4">
+          <div className="glass-card p-6 space-y-5 sticky top-24">
+            <h2 className="font-serif text-lg font-semibold">Your Ranking</h2>
+
+            {userStats && (
+              <>
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-12 h-12">
+                    <AvatarImage src={userStats.profile.photo_url} alt={userStats.profile.display_name} />
+                    <AvatarFallback>{userStats.profile.display_name.charAt(0).toUpperCase() || 'B'}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium text-sm">{userStats.profile.display_name || 'You'}</p>
+                    <Badge className="bg-primary text-primary-foreground border-none">
+                      Rank #{userStats.stats.rank || '—'}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Level {userStats.profile.level}</span>
+                    <span>{userStats.profile.total_score.toLocaleString()} XP</span>
+                  </div>
+                  <Progress value={levelProgress} className="h-2" />
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/60 rounded-xl px-3 py-2">
+                  <Flame size={16} className="text-orange-500" />
+                  {userStats.profile.streak_days} day streak
+                </div>
+
+                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl">
+                  Log Care Activity
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

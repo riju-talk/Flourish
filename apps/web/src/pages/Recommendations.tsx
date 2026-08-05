@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { RecommendationCard } from "@/components/RecommendationCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,12 +52,12 @@ export default function RecommendationsPage() {
   const isBusy = acceptMutation.isPending || dismissMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <div className="container mx-auto px-4 py-10 space-y-8">
+      <main className="flex-1 container mx-auto px-4 py-10 space-y-8">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight">Picked for your garden</h1>
+            <h1 className="font-serif text-4xl md:text-5xl font-semibold tracking-tight">Picked for your garden</h1>
             <p className="text-muted-foreground mt-1">
               Personalized plant suggestions based on what you already grow.
             </p>
@@ -64,7 +65,7 @@ export default function RecommendationsPage() {
           <Button
             onClick={() => generateMutation.mutate()}
             disabled={generateMutation.isPending}
-            className="vibrant-gradient text-white font-semibold rounded-full shadow-md hover:shadow-glow"
+            className="vibrant-gradient text-primary-foreground font-semibold rounded-full shadow-md hover:shadow-lg transition-shadow duration-500"
           >
             <Sparkles size={16} className="mr-2" />
             {generateMutation.isPending ? "Thinking..." : "Get New Suggestions"}
@@ -92,22 +93,24 @@ export default function RecommendationsPage() {
         ) : (
           <div className="glass-card text-center py-16 px-6">
             <div className="w-16 h-16 vibrant-gradient rounded-3xl flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="text-white" size={28} />
+              <Sparkles className="text-primary-foreground" size={28} />
             </div>
-            <h3 className="text-xl font-bold mb-2">We're still learning about your garden</h3>
+            <h3 className="font-serif text-xl font-semibold mb-2">We're still learning about your garden</h3>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               Add a few plants, then ask PlantMind for suggestions tailored to your space.
             </p>
             <Button
               onClick={() => generateMutation.mutate()}
               disabled={generateMutation.isPending}
-              className="vibrant-gradient text-white font-semibold rounded-full shadow-md hover:shadow-glow"
+              className="vibrant-gradient text-primary-foreground font-semibold rounded-full shadow-md hover:shadow-lg transition-shadow duration-500"
             >
               <Sparkles size={16} className="mr-2" /> Get My First Suggestions
             </Button>
           </div>
         )}
-      </div>
+      </main>
+
+      <Footer />
     </div>
   );
 }

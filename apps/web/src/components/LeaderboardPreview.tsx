@@ -33,24 +33,22 @@ export const LeaderboardPreview = () => {
     };
 
     return (
-        <section className="glass-card p-6 rounded-[2rem] space-y-6 relative overflow-hidden group hover:shadow-2xl transition-all duration-500">
-            <div className="absolute top-0 right-0 p-16 bg-yellow-500/10 rounded-full blur-3xl -mr-8 -mt-8 pointer-events-none"></div>
-
-            <div className="flex items-center justify-between relative z-10">
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                    <div className="bg-yellow-100 p-1.5 rounded-lg">
-                        <Trophy className="h-5 w-5 text-yellow-600" />
+        <section className="glass-card p-6 space-y-6">
+            <div className="flex items-center justify-between">
+                <h3 className="font-serif text-lg font-semibold flex items-center gap-2">
+                    <div className="bg-amber-100 p-1.5 rounded-lg">
+                        <Trophy className="h-5 w-5 text-amber-600" />
                     </div>
                     Global Leaders
                 </h3>
-                <span className="text-xs font-medium text-muted-foreground bg-white/50 px-2 py-1 rounded-full">Weekly</span>
+                <span className="text-xs font-medium text-muted-foreground bg-secondary px-2 py-1 rounded-full">All time</span>
             </div>
 
             <div className="space-y-4 relative z-10">
                 {leaders.map((leader, index) => (
                     <div
                         key={leader.name}
-                        className="flex items-center justify-between p-3 rounded-2xl bg-white/40 border border-white/30 transition-all duration-300 hover:scale-[1.02] hover:bg-white/60"
+                        className="flex items-center justify-between p-3 rounded-2xl bg-secondary/40 border border-border transition-all duration-500 ease-out hover:scale-[1.01] hover:bg-secondary/70"
                         style={{
                             animationDelay: `${index * 100}ms`
                         }}

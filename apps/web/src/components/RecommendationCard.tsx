@@ -76,7 +76,7 @@ export const RecommendationCard = ({ recommendation, onAccept, onDismiss, isBusy
         <Button
           onClick={() => onAccept(id)}
           disabled={isBusy}
-          className="w-full vibrant-gradient text-white font-semibold rounded-full shadow-md hover:shadow-glow"
+          className="w-full vibrant-gradient text-primary-foreground font-semibold rounded-full shadow-md hover:shadow-lg transition-shadow duration-500"
         >
           <Plus size={16} className="mr-1" /> Add to My Garden
         </Button>

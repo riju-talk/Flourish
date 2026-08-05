@@ -2,20 +2,16 @@
 Initialize Firebase Firestore Database for Flourish App
 This script sets up the database structure and indexes
 """
-import firebase_admin
-from firebase_admin import credentials, firestore
-import os
+from firebase_admin import firestore
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Initialize Firebase Admin
-service_account_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY", "firebase-service-account.json")
+from api.core.auth import ensure_firebase_initialized
 
-if not firebase_admin._apps:
-    cred = credentials.Certificate(service_account_path)
-    firebase_admin.initialize_app(cred)
+# Initialize Firebase Admin (same lazy, env-var-based init the API uses)
+ensure_firebase_initialized()
 
 # Get Firestore client
 db = firestore.client()

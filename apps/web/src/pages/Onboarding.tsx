@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Leaf, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const Onboarding = () => {
   const { completeOnboarding } = useAuth();
@@ -22,7 +22,7 @@ const Onboarding = () => {
     try {
       await completeOnboarding(fullName.trim(), phoneNumber.trim());
       toast({
-        title: "You're all set! 🌱",
+        title: "You're all set!",
         description: "Welcome to your garden.",
       });
     } catch (error: any) {
@@ -37,14 +37,14 @@ const Onboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-mesh flex items-center justify-center p-4">
-      <Card className="glass-card w-full max-w-md shadow-xl">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="glass-card w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 vibrant-gradient rounded-3xl flex items-center justify-center shadow-lg animate-float">
-            <Leaf className="w-8 h-8 text-white" />
+          <div className="mx-auto w-14 h-14 vibrant-gradient rounded-2xl flex items-center justify-center">
+            <img src="/logo_transparent.png" alt="Flourish" className="w-8 h-8 object-contain" />
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-3xl font-extrabold tracking-tight">Let's get you growing</CardTitle>
+            <CardTitle className="font-serif text-3xl font-semibold">Let's get you growing</CardTitle>
             <CardDescription>Tell us a bit about yourself.</CardDescription>
           </div>
         </CardHeader>
@@ -80,7 +80,7 @@ const Onboarding = () => {
             <Button
               type="submit"
               disabled={loading || !fullName.trim() || !phoneNumber.trim()}
-              className="w-full h-12 vibrant-gradient text-white font-semibold rounded-full shadow-md hover:shadow-glow transition-all"
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-sm transition-all"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

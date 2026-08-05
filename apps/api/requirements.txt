@@ -3,10 +3,15 @@ uvicorn[standard]==0.32.0
 pydantic==2.10.4
 pydantic-settings==2.6.1
 httpx==0.27.2
-groq==0.4.1
-langchain-groq>=0.2
+# Pinned below 1.0: langchain's 1.x line re-bundles LangGraph as the internal agent
+# execution engine (langchain.agents pulls in langgraph transitively) - staying on
+# 0.3.x keeps the classic standalone AgentExecutor and avoids LangGraph entirely,
+# per explicit instruction. groq itself is intentionally unpinned so it resolves to
+# whatever recent 0.x release langchain-groq actually needs (older groq SDKs don't
+# support the `reasoning_format` param langchain-groq sends for reasoning models).
+langchain>=0.3,<1
+langchain-groq>=0.3,<1
 langchain-tavily>=0.1
-langgraph>=0.2
 python-multipart==0.0.20
 python-jose[cryptography]==3.3.0
 requests==2.32.3
@@ -14,8 +19,6 @@ firebase-admin==6.6.0
 websockets==14.1
 python-dotenv==1.0.1
 aiofiles==24.1.0
-pillow==11.0.0
-PyPDF2==3.0.1
 mcp>=1.2
 apscheduler>=3.10
 pytest>=7.0

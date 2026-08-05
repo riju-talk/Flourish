@@ -41,6 +41,7 @@ describe('App', () => {
 
   it('renders the app shell without throwing', () => {
     expect(() => render(<App />)).not.toThrow();
-    expect(screen.getByText('Flourish')).toBeDefined();
+    // "Flourish" legitimately appears more than once (navbar wordmark + footer).
+    expect(screen.getAllByText('Flourish').length).toBeGreaterThan(0);
   });
 });

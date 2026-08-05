@@ -1,5 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+const mockAuth = vi.hoisted(() => ({ currentUser: null as null | { getIdToken: () => Promise<string> } }));
+
+vi.mock('@/lib/firebase', () => ({
+  auth: mockAuth,
+  storage: {},
+  db: {},
+  googleProvider: {},
+}));
+
 const mockInstance = vi.hoisted(() => {
   let reqHandler: ((config: any) => any) | null = null;
   let respErrHandler: ((error: any) => any) | null = null;
@@ -95,7 +104,11 @@ describe('api client', () => {
   });
 
   describe('auth token interceptor', () => {
-    it('attaches Bearer token from localStorage', async () => {
+    afterEach(() => {
+      mockAuth.currentUser = null;
+    });
+
+    it('falls back to localStorage when no Firebase user is signed in', async () => {
       localStorage.setItem('flourish_token', 'my-token');
 
       const reqHandler = mockInstance.__getReqHandler();
@@ -107,11 +120,34 @@ describe('api client', () => {
       expect(result.headers.Authorization).toBe('Bearer my-token');
     });
 
-    it('does not attach token when localStorage is empty', async () => {
+    it('does not attach token when there is no signed-in user and localStorage is empty', async () => {
       const reqHandler = mockInstance.__getReqHandler();
       const config = { headers: {} };
       const result = await reqHandler!(config);
       expect(result.headers.Authorization).toBeUndefined();
+    });
+
+    it('fetches a fresh token from Firebase when a user is signed in, even if localStorage is stale', async () => {
+      localStorage.setItem('flourish_token', 'stale-token');
+      mockAuth.currentUser = { getIdToken: vi.fn(() => Promise.resolve('fresh-token')) };
+
+      const reqHandler = mockInstance.__getReqHandler();
+      const config = { headers: {} };
+      const result = await reqHandler!(config);
+
+      expect(result.headers.Authorization).toBe('Bearer fresh-token');
+      expect(localStorage.getItem('flourish_token')).toBe('fresh-token');
+    });
+
+    it('falls back to localStorage if getIdToken() throws', async () => {
+      localStorage.setItem('flourish_token', 'fallback-token');
+      mockAuth.currentUser = { getIdToken: vi.fn(() => Promise.reject(new Error('network error'))) };
+
+      const reqHandler = mockInstance.__getReqHandler();
+      const config = { headers: {} };
+      const result = await reqHandler!(config);
+
+      expect(result.headers.Authorization).toBe('Bearer fallback-token');
     });
   });
 

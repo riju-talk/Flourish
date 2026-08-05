@@ -87,11 +87,24 @@ Flourish is built with modern, reliable technologies to ensure fast performance 
 ## � Quick Start
 
 ### Prerequisites
-- **Python 3.9+** - [Download](https://www.python.org/downloads/)
+- **Python 3.12+** - [Download](https://www.python.org/downloads/)
 - **Node.js 18+** - [Download](https://nodejs.org/)
 - **Firebase Account** - Project: `flourish-de908` (already configured)
 - **Groq API key** - required, no local model fallback ([console.groq.com](https://console.groq.com))
 - **Tavily API key** - required for grounded recommendations ([tavily.com](https://tavily.com))
+
+### One-time backend setup
+All `*:api` npm scripts run through a virtualenv at `apps/api/.venv` (they call
+`.venv/Scripts/python` directly, not whatever `python` happens to be on your `PATH` -
+that was a real bug: it silently ran against a system Python with none of the project's
+dependencies installed). Create it once before your first `npm run dev`:
+```bash
+cd apps/api
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt
+cd ../..
+```
+After that, `npm run dev` / `npm test` / `npm run build` all work from the repo root.
 
 ### NPM Scripts (Monorepo Management)
 
@@ -105,7 +118,7 @@ npm run dev:web          # Start web only (port 5173)
 **Production:**
 ```bash
 npm run build            # Build both services
-npm run build:api        # Build API Docker image
+npm run build:api        # Install/refresh backend dependencies into apps/api/.venv
 npm run build:web        # Build web for production
 npm start                # Start both services in production mode
 ```
@@ -151,10 +164,13 @@ npm run dev
 ### First Time Setup
 
 1. **Firebase Configuration**
-   - Download the service-account key for `flourish-de908` and keep it **outside version
-     control** (it's git-ignored by filename pattern — see `.gitignore`).
-   - Point `FIREBASE_SERVICE_ACCOUNT_KEY` at it in `apps/api/.env` (relative to `apps/api`,
-     since that's uvicorn's working directory).
+   - Download the service-account key JSON for `flourish-de908` and copy its fields
+     into the `FIREBASE_*` variables in `apps/api/.env` (`FIREBASE_PROJECT_ID`,
+     `FIREBASE_PRIVATE_KEY_ID`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL`,
+     `FIREBASE_CLIENT_ID`, `FIREBASE_CLIENT_X509_CERT_URL`) — there's no key file on
+     disk to manage, `apps/api/.env` is already git-ignored.
+   - `FIREBASE_PRIVATE_KEY` must be double-quoted with its `\n` line breaks kept
+     literal, exactly as they appear in the downloaded JSON's `private_key` field.
    - Add `GROQ_API_KEY` and `TAVILY_API_KEY` to `apps/api/.env` — both required, see
      `docs/02-Tech-Stack-Architecture.md` §6.
 
@@ -243,13 +259,28 @@ this is the short version - full detail in `docs/02-Tech-Stack-Architecture.md` 
 ### Backend (Render)
 1. New Web Service → connect this repo. Render will read `render.yaml` (root
    directory `apps/api`, Python 3.12, health check `/health`).
-2. **Secret Files** tab → upload the Firebase service-account JSON.
-3. **Environment** tab → set the `sync: false` vars from `render.yaml`:
+2. **Environment** tab → set the `sync: false` vars from `render.yaml`:
    `ALLOWED_ORIGINS` (your Vercel URL), `GROQ_API_KEY`, `TAVILY_API_KEY`,
-   `OPENWEATHER_API_KEY`, `PLANT_ID_API_KEY`, `UNSPLASH_ACCESS_KEY`, and
-   `FIREBASE_SERVICE_ACCOUNT_KEY` = the mounted Secret File path (Render shows this
-   after upload, typically `/etc/secrets/<filename>`).
-4. Deploy. Confirm `GET https://<your-service>.onrender.com/health` returns `{"status":"ok"}`.
+   `OPENWEATHER_API_KEY`, `PLANT_ID_API_KEY`, `UNSPLASH_APPLICATION_ID`,
+   `UNSPLASH_ACCESS_KEY`, `UNSPLASH_SECRET_KEY` (only the Access Key is actually
+   used - see `docs/02-Tech-Stack-Architecture.md` §5), and the Firebase fields
+   below - **no Secret File needed**, Firebase Admin credentials are plain env vars:
+   `FIREBASE_PROJECT_ID`, `FIREBASE_PRIVATE_KEY_ID`, `FIREBASE_PRIVATE_KEY` (paste
+   with its literal `\n` sequences intact, in quotes), `FIREBASE_CLIENT_EMAIL`,
+   `FIREBASE_CLIENT_ID`, `FIREBASE_CLIENT_X509_CERT_URL`.
+3. Deploy. Confirm `GET https://<your-service>.onrender.com/health` returns `{"status":"ok"}`.
+
+### Backend (Docker, alternative to Render's native Python runtime)
+`apps/api/Dockerfile` is a working multi-stage build (build context is the repo root,
+since it references `apps/api/...` paths):
+```bash
+npm run docker:build:api   # docker build -f apps/api/Dockerfile -t flourish-api .
+npm run docker:run:api     # docker run --rm -p 8000:8000 --env-file apps/api/.env flourish-api
+```
+`/health` works even with no Firebase credentials configured (auth initializes lazily
+on first authenticated request, not at startup - see `docs/02-Tech-Stack-Architecture.md`
+§5). Authenticated routes work out of the box too - `--env-file apps/api/.env` passes
+the `FIREBASE_*` fields straight through as env vars, no file mount needed.
 
 ### Frontend (Vercel)
 1. New Project → import this repo. `vercel.json` at the repo root handles the

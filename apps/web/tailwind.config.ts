@@ -20,15 +20,16 @@ export default {
                 extend: {
                         fontFamily: {
                                 sans: ["Outfit", "sans-serif"],
+                                serif: ["Fraunces", "serif"],
                         },
                         colors: {
-                                // Flourish brand colors
+                                // Flourish brand colors - warm cream + deep forest, editorial botanical look
                                 flourish: {
-                                        cream: '#DAD7CD',
+                                        cream: '#F5F1E8',
                                         sage: '#A3B18A',
-                                        green: '#588157',
-                                        dark: '#3A5A40',
-                                        forest: '#344E41',
+                                        green: '#4A7856',
+                                        dark: '#1F3B2C',
+                                        forest: '#16261E',
                                 },
                                 border: 'hsl(var(--border))',
                                 input: 'hsl(var(--input))',
@@ -98,18 +99,32 @@ export default {
                                 },
                                 'bounce-gentle': {
                                         '0%, 100%': { transform: 'translateY(0)' },
-                                        '50%': { transform: 'translateY(-10px)' },
+                                        '50%': { transform: 'translateY(-8px)' },
                                 },
                                 'pulse-soft': {
                                         '0%, 100%': { opacity: '1' },
-                                        '50%': { opacity: '0.7' },
+                                        '50%': { opacity: '0.75' },
+                                },
+                                // Overrides Tailwind's built-in `bounce` (default: 1s, sharp
+                                // cubic-bezier) with a slower, softer motion - used by branded
+                                // loaders and the chat typing indicator via animate-bounce.
+                                bounce: {
+                                        '0%, 100%': {
+                                                transform: 'translateY(-10%)',
+                                                animationTimingFunction: 'cubic-bezier(0.45,0,0.55,1)'
+                                        },
+                                        '50%': {
+                                                transform: 'translateY(0)',
+                                                animationTimingFunction: 'cubic-bezier(0.45,0,0.55,1)'
+                                        },
                                 }
                         },
                         animation: {
                                 'accordion-down': 'accordion-down 0.2s ease-out',
                                 'accordion-up': 'accordion-up 0.2s ease-out',
-                                'bounce-gentle': 'bounce-gentle 2s ease-in-out infinite',
-                                'pulse-soft': 'pulse-soft 2s ease-in-out infinite',
+                                'bounce-gentle': 'bounce-gentle 3s ease-in-out infinite',
+                                'pulse-soft': 'pulse-soft 3s ease-in-out infinite',
+                                bounce: 'bounce 2.4s infinite',
                         }
                 }
         },

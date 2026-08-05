@@ -1,6 +1,15 @@
-Flourish — Design System & UX Rulebook v2.0
-A production-grade design system for the Cosmic Garden experience.
-Version: 2.0 · Last updated: 2026-08-04
+Flourish — Design System & UX Rulebook v3.0
+A production-grade design system for the "Botanical Journal" experience.
+Version: 3.0 · Last updated: 2026-08-05
+
+> **v3.0 supersedes "Cosmic Garden" (v2.0).** The glassmorphism/emerald-gradient
+> aesthetic has been fully replaced by a warmer, editorial look — cream backgrounds,
+> a deep forest-green primary, a serif display face paired with a clean sans for UI,
+> and flat/solid cards instead of blurred glass. Navigation is a **single top navbar
+> everywhere** — there is no sidebar anywhere in the app, on any page. Section numbers
+> below are unchanged from v2.0 where the underlying pattern (spacing, motion,
+> accessibility, page templates) still applies; only color/typography/surface tokens
+> and the navigation pattern actually changed.
 Table of Contents
 Design Identity
 Design Tokens
@@ -18,15 +27,17 @@ Accessibility (A11y)
 Responsive Behavior
 Brand Voice & Microcopy
 UX Rules
-1. Design Identity — "Cosmic Garden"
-Flourish pairs organic garden warmth with a premium, slightly cosmic glow.
+1. Design Identity — "Botanical Journal"
+Flourish reads like a premium field journal for plant people: warm cream paper, deep
+forest-green ink, an elegant serif for headlines, generous whitespace. Confident and
+editorial, not glassy or "techy."
 Core Principles
 Table
 Principle	Description
-Alive	Nothing is static. Gentle ambient motion, living gradients, and organic shapes make the app feel breathing.
-Warm	Soft greens, cream tones, and friendly microcopy replace cold clinical interfaces.
-Premium	Glassmorphism, generous whitespace, and refined animations signal quality without arrogance.
-Calming	No jarring transitions. No harsh reds. Errors are handled gracefully.
+Warm	Cream backgrounds, deep forest-green accents, and friendly microcopy replace cold clinical interfaces.
+Editorial	A serif display face for headings gives the app a considered, journal-like feel — never a gimmick font.
+Calm & flat	Solid cards with soft shadows, not blur/glass. No jarring transitions, no harsh reds. Errors are handled gracefully.
+Uncluttered	One navigation surface (the top navbar) on every page — no sidebar, no competing nav patterns.
 Brand Personality
 Voice: Your knowledgeable, encouraging gardening friend — not a botanist professor.
 Tone: Warm, playful, confident. Never apologetic for being helpful.
@@ -40,50 +51,46 @@ Color Palette
 Light Mode (:root)
 Table
 Token	HSL Value	Usage
---background	145 20% 96%	App canvas — soft green-white
---foreground	145 60% 10%	Primary text — deep jungle green
---card	0 0% 100%	Elevated surfaces
---popover	0 0% 100%	Dropdowns, tooltips, menus
---primary	150 100% 35%	Electric emerald — CTAs, focus, active states
---primary-foreground	0 0% 100%	White text on primary
---secondary	150 30% 90%	Soft mint surfaces, secondary buttons
---muted	150 20% 94%	Subtle backgrounds, disabled states
---accent	150 40% 92%	Hover/emphasis tint, selected rows
---destructive	0 84% 60%	Errors, destructive actions
---destructive-foreground	0 0% 100%	Text on destructive backgrounds
---border	150 20% 90%	Dividers, input borders
---input	150 20% 90%	Form field borders
---ring	150 100% 35%	Focus rings, selected indicators
---radius	1.25rem	Global corner radius (20px)
+--background	40 30% 96%	App canvas — warm cream
+--foreground	155 35% 12%	Primary text — deep forest green-black
+--card	40 35% 99%	Elevated surfaces (near-white warm)
+--popover	40 35% 99%	Dropdowns, tooltips, menus
+--primary	155 45% 18%	Deep forest green — CTAs, focus, active states, logo
+--primary-foreground	40 30% 98%	Cream/white text on primary
+--secondary	140 20% 92%	Soft sage/mint surfaces, secondary buttons
+--muted	35 15% 93%	Subtle backgrounds, disabled states
+--accent	145 30% 90%	Hover/emphasis tint, selected rows
+--destructive	0 72% 51%	Errors, destructive actions
+--destructive-foreground	40 30% 98%	Text on destructive backgrounds
+--border	35 15% 87%	Dividers, input borders
+--input	35 15% 87%	Form field borders
+--ring	155 45% 18%	Focus rings, selected indicators
+--radius	1rem	Global corner radius (16px)
 Dark Mode (.dark)
 Table
 Token	HSL Value	Usage
---background	220 30% 8%	Deep space blue-black canvas
---foreground	150 20% 98%	Near-white text
---card	220 25% 12%	Elevated dark surfaces
---popover	220 25% 12%	Dark dropdowns, menus
---primary	150 80% 50%	Brighter emerald for dark contrast
---primary-foreground	220 30% 8%	Dark text on primary
---secondary	217 32% 17%	Muted dark surfaces
---muted	217 32% 17%	Subtle dark backgrounds
---accent	150 60% 15%	Green-tinted dark accent
+--background	155 25% 8%	Deep charcoal-forest canvas
+--foreground	40 20% 95%	Warm near-white text
+--card	155 20% 11%	Elevated dark surfaces
+--popover	155 20% 11%	Dark dropdowns, menus
+--primary	140 40% 55%	Brighter sage-green for dark contrast
+--primary-foreground	155 30% 10%	Dark text on primary
+--secondary	155 15% 16%	Muted dark surfaces
+--muted	155 15% 16%	Subtle dark backgrounds
+--accent	140 25% 18%	Green-tinted dark accent
 --destructive	0 62% 50%	Softer red for dark mode
---destructive-foreground	0 0% 100%	White on destructive
---border	217 32% 17%	Dark dividers
---input	217 32% 17%	Dark form borders
---ring	150 80% 50%	Bright emerald focus ring
+--destructive-foreground	40 20% 95%	Text on destructive
+--border	155 15% 18%	Dark dividers
+--input	155 15% 18%	Dark form borders
+--ring	140 40% 55%	Bright sage-green focus ring
 Brand Palette (Extended)
 plain
 colors.flourish = {
-  cream:   '#DAD7CD',  // Warm neutrals, backgrounds
+  cream:   '#F5F1E8',  // Warm neutrals, backgrounds
   sage:    '#A3B18A',  // Secondary accents, icons
-  green:   '#588157',  // Primary brand green
-  dark:    '#3A5A40',  // Deep green text, headers
-  forest:  '#344E41',  // Darkest green, borders
-  mint:    '#E8F5E9',  // Ultra-light green tint
-  lime:    '#D8F3DC',  // Success states, badges
-  earth:   '#BC6C25',  // Warm accent (soil, autumn)
-  sky:     '#87CEEB',  // Water, weather elements
+  green:   '#4A7856',  // Primary brand green
+  dark:    '#1F3B2C',  // Deep green text, headers
+  forest:  '#16261E',  // Darkest green, borders
 }
 Semantic Status Colors
 Table
@@ -91,18 +98,24 @@ Status	Light	Dark	Usage
 Success	hsl(142 76% 36%)	hsl(142 70% 45%)	Growth, completion, healthy plants
 Warning	hsl(38 92% 50%)	hsl(38 90% 55%)	Needs attention, upcoming tasks
 Info	hsl(200 90% 45%)	hsl(200 85% 55%)	Tips, educational content
-Error	hsl(0 84% 60%)	hsl(0 62% 50%)	Failures, destructive actions
-Glassmorphism Tokens
+Error	hsl(0 72% 51%)	hsl(0 62% 50%)	Failures, destructive actions
+Card Surface Tokens (formerly "Glassmorphism")
+Cards are now flat and solid — no backdrop blur. The token names kept the `--glass-*`
+prefix so existing `.glass-card` markup across the app didn't need to change, but the
+values now describe a plain card with a soft shadow:
 css
---glass-bg:        hsl(var(--card) / 0.7);
---glass-border:    hsl(var(--border) / 0.3);
---glass-blur:      20px;
---glass-shadow:    0 8px 32px hsl(145 60% 10% / 0.08);
---glass-highlight: inset 0 1px 0 hsl(0 0% 100% / 0.15);
+--glass-bg:        hsl(var(--card));
+--glass-border:    hsl(var(--border));
+--glass-blur:      0px;
+--glass-shadow:    0 1px 2px hsl(30 20% 20% / 0.04), 0 8px 24px hsl(30 20% 20% / 0.06);
 3. Typography System
 Font Family
-Primary: Outfit (Google Fonts) — geometric, friendly, modern.
-Fallback stack: 'Outfit', system-ui, -apple-system, sans-serif
+Display/headings: **Fraunces** (Google Fonts, `font-serif`) — a warm, editorial serif
+used for the wordmark, page titles, and section headings. This is the single biggest
+visual signal of the new identity; don't fall back to the sans for anything that reads
+as a "headline."
+Body/UI: **Outfit** (Google Fonts, default `font-sans`) — geometric, friendly, modern.
+Used for body copy, nav links, buttons, form inputs, everything that isn't a headline.
 Monospace: JetBrains Mono (for data, timestamps, debug info only).
 Type Scale
 Table
@@ -538,7 +551,7 @@ Breakpoints
 Table
 Name	Width	Key Changes
 sm	640px	2-column grids, side margins increase
-md	768px	Sidebar appears, navbar expands
+md	768px	Content aside/sidebar columns appear, navbar nav links expand from hidden
 lg	1024px	3-column grids, dashboard 8/4 split
 xl	1280px	4-column grids, max container width
 2xl	1536px	Extra padding, larger typography
@@ -677,12 +690,12 @@ src/
 │   │   ├── garden/[id]/page.tsx
 │   │   ├── leaderboard/page.tsx
 │   │   ├── plantmind/page.tsx
-│   │   └── layout.tsx      # Dashboard shell (navbar + sidebar)
+│   │   └── layout.tsx      # Dashboard shell (single top Navbar only - no sidebar)
 │   ├── layout.tsx          # Root layout (providers, fonts, theme)
 │   └── globals.css         # CSS variables, utilities, animations
 ├── components/
 │   ├── ui/                 # shadcn/ui primitives
-│   ├── layout/             # Navbar, Sidebar, Footer, AppShell
+│   ├── layout/             # Navbar, Footer, AppShell
 │   ├── plants/             # PlantCard, PlantGrid, PlantDetail
 │   ├── dashboard/          # DailyChecklist, StatsWidget, WeatherWidget
 │   ├── leaderboard/        # LeaderboardRow, LeaderboardTable

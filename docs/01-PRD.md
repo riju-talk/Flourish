@@ -67,7 +67,6 @@ Wants to learn and improve over time.
 **Needs:**
 
 - AI assistant
-- document analysis
 - care explanations
 - plant recommendations
 
@@ -331,40 +330,6 @@ Users can search for a plant by name.
 
 ---
 
-## 5.7 Document Analysis
-
-Users can upload plant care guides.
-
-### Supported formats
-
-- PDF
-- TXT
-- Markdown
-
-### Extracted information
-
-- watering guidance
-- fertilizing guidance
-- light requirements
-- humidity requirements
-- toxicity warnings
-- seasonal care notes
-- action items
-
-### Output example
-
-```json
-{
-  "watering": "Water when top soil is dry",
-  "fertilizing": "Monthly during growing season",
-  "light": "Bright indirect light",
-  "warnings": ["Toxic to pets"],
-  "action_items": ["Repot in spring"]
-}
-```
-
----
-
 ## 5.8 Personalized Recommendations
 
 Flourish recommends new plants the user is likely to succeed with.
@@ -510,10 +475,9 @@ The leaderboard should be engaging, but privacy-safe by default.
 | `/auth` | Auth | Public | Google Sign-In |
 | `/onboarding` | Onboarding | Protected, one-time | Collect profile details |
 | `/` | Dashboard | Protected | Daily tasks, plant overview, recommendations |
-| `/chat` | PlantMind Chat | Protected | AI assistant and document upload |
+| `/chat` | PlantMind Chat | Protected | AI assistant |
 | `/calendar` | Calendar | Protected | Care schedule |
 | `/lookup` | Plant Lookup | Protected | AI plant search |
-| `/documents` | Documents | Protected | Upload and analyze care guides |
 | `/recommendations` | Recommendations | Protected | Personalized plant feed |
 | `/leaderboard` | Leaderboard | Protected | Privacy-safe rankings |
 | `*` | NotFound | Public | 404 fallback |
@@ -702,7 +666,6 @@ The leaderboard should be engaging, but privacy-safe by default.
 
 - `POST /api/chat`
 - `POST /api/plants/lookup`
-- `POST /api/chat/document-analysis`
 - `POST /api/recommendations/generate`
 - `GET /api/recommendations`
 - `POST /api/recommendations/{id}/accept`

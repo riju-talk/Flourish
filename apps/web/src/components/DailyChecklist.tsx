@@ -50,10 +50,10 @@ export const DailyChecklist = ({ tasks, isLoading }: DailyChecklistProps) => {
             {tasks.map((task) => (
                 <div
                     key={task.id}
-                    className="flex items-center justify-between p-4 rounded-2xl bg-white/60 border border-white/40 shadow-sm hover:shadow-md hover:bg-white/80 transition-all group hover:-translate-x-1 duration-300"
+                    className="flex items-center justify-between p-4 rounded-2xl bg-secondary/50 border border-border shadow-sm hover:shadow-md hover:bg-secondary/80 transition-all ease-out group hover:-translate-x-0.5 duration-500"
                 >
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white to-white/50 flex items-center justify-center shadow-inner">
+                        <div className="w-12 h-12 rounded-xl bg-card flex items-center justify-center shadow-inner">
                             {getTaskIcon(task.task_type)}
                         </div>
                         <div>

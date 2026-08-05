@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import plants, dashboard, chat, tasks, images, mcp, documents, notifications, leaderboard, storage, auth, recommendations
+from api.routes import plants, dashboard, chat, tasks, images, mcp, notifications, leaderboard, storage, auth, recommendations
 from api.core.config import settings
 from api.core.auth import verify_firebase_token
 from api.services.scheduler_service import start_scheduler, stop_scheduler
@@ -42,7 +42,6 @@ app.include_router(chat.router, prefix="/api/chat", tags=["chat"], dependencies=
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(images.router, prefix="/api/images", tags=["images"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(mcp.router, prefix="/api/mcp", tags=["mcp"], dependencies=[Depends(verify_firebase_token)])
-app.include_router(documents.router, prefix="/api/documents", tags=["documents"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["leaderboard"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(storage.router, prefix="/api/storage", tags=["storage"], dependencies=[Depends(verify_firebase_token)])
@@ -55,12 +54,12 @@ async def root():
         "version": "1.0.0",
         "features": [
             "Plant Inventory Management",
-            "AI-Powered Plant Care Assistant (Ollama)",
+            "Agentic AI Plant Care Assistant (Groq + LangChain)",
+            "Personalized Plant Recommendations",
             "Task Scheduling & Calendar",
-            "Real-time Notifications",
+            "Real-time Notifications & Email",
             "Gamification & Leaderboard",
-            "MCP Server Integration",
-            "Document Analysis"
+            "MCP Server Integration"
         ]
     }
 

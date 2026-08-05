@@ -4,79 +4,77 @@
 
 @layer base {
   :root {
-    /* Premium "Cosmic Garden" Palette */
-    --background: 145 20% 96%;
-    /* Soft aesthetic green-white */
-    --foreground: 145 60% 10%;
-    /* Deep jungle green */
+    /* "Botanical Journal" Palette - warm cream + deep forest green */
+    --background: 40 30% 96%;
+    --foreground: 155 35% 12%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 145 60% 10%;
+    --card: 40 35% 99%;
+    --card-foreground: 155 35% 12%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 145 60% 10%;
+    --popover: 40 35% 99%;
+    --popover-foreground: 155 35% 12%;
 
-    /* Vibrant Primary: A rich, electric emerald */
-    --primary: 150 100% 35%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary: rich, deep forest green */
+    --primary: 155 45% 18%;
+    --primary-foreground: 40 30% 98%;
 
-    --secondary: 150 30% 90%;
-    --secondary-foreground: 150 100% 25%;
+    --secondary: 140 20% 92%;
+    --secondary-foreground: 155 40% 20%;
 
-    --muted: 150 20% 94%;
-    --muted-foreground: 150 10% 45%;
+    --muted: 35 15% 93%;
+    --muted-foreground: 30 8% 42%;
 
-    --accent: 150 40% 92%;
-    --accent-foreground: 150 100% 30%;
+    --accent: 145 30% 90%;
+    --accent-foreground: 155 45% 20%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 40 30% 98%;
 
-    --border: 150 20% 90%;
-    --input: 150 20% 90%;
-    --ring: 150 100% 35%;
+    --border: 35 15% 87%;
+    --input: 35 15% 87%;
+    --ring: 155 45% 18%;
 
-    --radius: 1.25rem;
-    /* Larger, smoother border radius */
+    --radius: 1rem;
 
-    /* Glassmorphism Configuration */
-    --glass-bg: rgba(255, 255, 255, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.5);
-    --glass-blur: 20px;
-    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    /* Card surface tokens (formerly "glass") - flat, soft-shadow cards, no blur */
+    --glass-bg: hsl(var(--card));
+    --glass-border: hsl(var(--border));
+    --glass-blur: 0px;
+    --glass-shadow: 0 1px 2px hsl(30 20% 20% / 0.04), 0 8px 24px hsl(30 20% 20% / 0.06);
   }
 
   .dark {
-    --background: 220 30% 8%;
-    /* Deep space blue-black */
-    --foreground: 150 20% 98%;
+    --background: 155 25% 8%;
+    --foreground: 40 20% 95%;
 
-    --card: 220 25% 12%;
-    --card-foreground: 150 20% 98%;
+    --card: 155 20% 11%;
+    --card-foreground: 40 20% 95%;
 
-    --popover: 220 25% 12%;
-    --popover-foreground: 150 20% 98%;
+    --popover: 155 20% 11%;
+    --popover-foreground: 40 20% 95%;
 
-    --primary: 150 80% 50%;
-    /* Brighter emerald for dark mode */
-    --primary-foreground: 220 30% 8%;
+    --primary: 140 40% 55%;
+    --primary-foreground: 155 30% 10%;
 
-    --secondary: 217 32% 17%;
-    --secondary-foreground: 150 20% 98%;
+    --secondary: 155 15% 16%;
+    --secondary-foreground: 40 20% 95%;
 
-    --muted: 217 32% 17%;
-    --muted-foreground: 215 20% 70%;
+    --muted: 155 15% 16%;
+    --muted-foreground: 40 10% 65%;
 
-    --accent: 150 60% 15%;
-    --accent-foreground: 150 80% 50%;
+    --accent: 140 25% 18%;
+    --accent-foreground: 140 40% 60%;
 
-    --border: 217 32% 17%;
-    --input: 217 32% 17%;
-    --ring: 150 80% 50%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 40 20% 95%;
 
-    --glass-bg: rgba(20, 25, 40, 0.6);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    --border: 155 15% 18%;
+    --input: 155 15% 18%;
+    --ring: 140 40% 55%;
+
+    --glass-bg: hsl(var(--card));
+    --glass-border: hsl(var(--border));
+    --glass-shadow: 0 1px 2px hsl(0 0% 0% / 0.2), 0 8px 24px hsl(0 0% 0% / 0.3);
   }
 }
 
@@ -87,49 +85,43 @@
 
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/20;
-    /* Rich, subtle mesh gradient background */
-    background-image:
-      radial-gradient(circle at 0% 0%, rgba(34, 197, 94, 0.1) 0%, transparent 50%),
-      radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
-      radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0) 0%, rgba(34, 197, 94, 0.03) 100%);
-    background-attachment: fixed;
   }
 }
 
 @layer components {
 
-  /* Premium Glass Card Utility */
+  /* Flat card surface - white/cream, soft shadow, no blur. Keeps the .glass-card
+     class name so existing markup across the app doesn't need to change. */
   .glass-card {
     background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
-    @apply rounded-3xl transition-all duration-300;
+    @apply rounded-2xl transition-all duration-500 ease-out;
   }
 
-  /* Interactive Hover Effect */
+  /* Interactive Hover Effect - slow and soft, not snappy */
   .hover-lift {
-    @apply transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-primary/10;
+    @apply transition-all duration-500 ease-out hover:-translate-y-1 hover:shadow-lg;
   }
 
-  /* Vibrant Gradient Text/Backgrounds */
+  /* Solid primary fill for CTAs/icons (was a green gradient) */
   .vibrant-gradient {
-    @apply bg-gradient-to-br from-green-500 to-emerald-700;
+    @apply bg-primary;
   }
 
+  /* Wordmark / headline accent - flat deep forest, set in the serif */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300;
+    @apply text-primary font-serif;
   }
 
-  /* Custom Animations */
+  /* Custom Animations - slow, gentle, never snappy */
   @keyframes float {
     0% {
       transform: translateY(0px);
     }
 
     50% {
-      transform: translateY(-10px);
+      transform: translateY(-6px);
     }
 
     100% {
@@ -138,7 +130,7 @@
   }
 
   .animate-float {
-    animation: float 6s ease-in-out infinite;
+    animation: float 8s ease-in-out infinite;
   }
 
   @keyframes pulse-soft {
@@ -150,12 +142,32 @@
     }
 
     50% {
-      opacity: 0.8;
-      transform: scale(0.98);
+      opacity: 0.88;
+      transform: scale(0.99);
     }
   }
 
   .leaf-pulse {
-    animation: pulse-soft 3s ease-in-out infinite;
+    animation: pulse-soft 4s ease-in-out infinite;
+  }
+
+  /* A gentler, slower replacement for Tailwind's default animate-bounce - use for
+     branded loaders instead of the built-in bounce, which reads as fast/AI-generated. */
+  @keyframes soft-bounce {
+
+    0%,
+    100% {
+      transform: translateY(0);
+      animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+    }
+
+    50% {
+      transform: translateY(-8px);
+      animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+    }
+  }
+
+  .animate-soft-bounce {
+    animation: soft-bounce 2.4s ease-in-out infinite;
   }
 }

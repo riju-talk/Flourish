@@ -1,5 +1,5 @@
 import httpx
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timedelta
 from ..core.config import settings
 from ..models.plant import Plant
@@ -23,7 +23,10 @@ class PlantService:
                 if response.status_code == 200:
                     data = response.json()
                     if data["results"]:
-                        return data["results"][0]["urls"]["regular"]
+                        photo = data["results"][0]
+                        download_location = photo.get("links", {}).get("download_location")
+                        await PlantService._track_unsplash_download(client, download_location)
+                        return photo["urls"]["regular"]
                 else:
                     print(f"Unsplash API returned {response.status_code}: {response.text[:200]}")
         except Exception as e:
@@ -31,6 +34,20 @@ class PlantService:
 
         # Fallback to a default plant image
         return "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&h=300&fit=crop"
+
+    @staticmethod
+    async def _track_unsplash_download(client: httpx.AsyncClient, download_location: Optional[str]) -> None:
+        """
+        Unsplash API Guidelines require pinging a photo's download_location whenever
+        it's actually used (not just searched) - see https://unsplash.com/documentation#track-a-photo-download.
+        Best-effort: a tracking failure should never block adding the plant.
+        """
+        if not download_location or not settings.UNSPLASH_ACCESS_KEY:
+            return
+        try:
+            await client.get(download_location, params={"client_id": settings.UNSPLASH_ACCESS_KEY})
+        except Exception:
+            pass
 
     @staticmethod
     async def generate_care_schedule(plant: Plant) -> List[CareTask]:

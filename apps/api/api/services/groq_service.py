@@ -2,9 +2,10 @@ import json
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 from langchain_core.tools import tool
-from langgraph.prebuilt import create_react_agent
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.agents import AgentExecutor, create_tool_calling_agent
 
 from ..core.config import settings
 from ..models.chat import ChatMessage, ChatResponse
@@ -66,7 +67,12 @@ def _build_tools(user_id: str):
     return [get_user_garden, get_task_history, get_weather, web_search]
 
 class GroqService:
-    """Sole LLM backend for Flourish. Ollama has been retired - see docs/04-Rules-of-Engagement.md Rule 11."""
+    """
+    Sole LLM backend for Flourish. Ollama has been retired - see
+    docs/04-Rules-of-Engagement.md Rule 11. The agent is built on plain LangChain
+    (langchain.agents.AgentExecutor + create_tool_calling_agent) - LangGraph is not
+    used anywhere in this codebase.
+    """
 
     @staticmethod
     def _client(json_mode: bool = False) -> ChatGroq:
@@ -80,6 +86,24 @@ class GroqService:
         return ChatGroq(**kwargs)
 
     @staticmethod
+    def _build_agent_executor(user_id: str, system_prompt: str) -> AgentExecutor:
+        """
+        Build a tool-calling agent bound to this user's tools. AgentExecutor's
+        reason -> act -> observe loop is capped by max_iterations so a turn can't run
+        away calling tools indefinitely - see PLANT_MIND_SYSTEM_PROMPT's "at most 2
+        tools" guidance.
+        """
+        tools = _build_tools(user_id)
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{input}"),
+            MessagesPlaceholder("agent_scratchpad"),
+        ])
+        agent = create_tool_calling_agent(GroqService._client(), tools, prompt)
+        return AgentExecutor(agent=agent, tools=tools, max_iterations=4, handle_parsing_errors=True)
+
+    @staticmethod
     async def chat_with_ai(
         messages: List[ChatMessage],
         user_id: str,
@@ -89,24 +113,26 @@ class GroqService:
         try:
             if not settings.GROQ_API_KEY:
                 raise RuntimeError("GROQ_API_KEY is not configured")
+            if not messages:
+                raise ValueError("messages must contain at least the user's latest turn")
 
-            tools = _build_tools(user_id)
-            agent = create_react_agent(GroqService._client(), tools)
-
-            lc_messages: List[Any] = [SystemMessage(content=PLANT_MIND_SYSTEM_PROMPT)]
+            system_prompt = PLANT_MIND_SYSTEM_PROMPT
             if context:
-                lc_messages.append(SystemMessage(content=context))
-            for m in messages:
-                if m.role == "user":
-                    lc_messages.append(HumanMessage(content=m.content))
-                else:
-                    lc_messages.append(AIMessage(content=m.content))
+                system_prompt += f"\n\nAdditional context: {context}"
 
-            result = await agent.ainvoke(
-                {"messages": lc_messages},
-                config={"recursion_limit": 8}
-            )
-            content = result["messages"][-1].content
+            chat_history: List[BaseMessage] = []
+            for m in messages[:-1]:
+                if m.role == "user":
+                    chat_history.append(HumanMessage(content=m.content))
+                else:
+                    chat_history.append(AIMessage(content=m.content))
+
+            executor = GroqService._build_agent_executor(user_id, system_prompt)
+            result = await executor.ainvoke({
+                "input": messages[-1].content,
+                "chat_history": chat_history
+            })
+            content = result["output"]
 
             suggestions = GroqService._generate_suggestions(content, messages)
             await GroqService.update_agent_profile_summary(user_id)
@@ -208,37 +234,6 @@ class GroqService:
             }
 
     @staticmethod
-    async def analyze_document(document_text: str, analysis_type: str = "care_guide") -> Dict[str, Any]:
-        """Analyze uploaded plant care documents"""
-        prompt = f"""
-        Analyze this plant care document and extract key information:
-
-        {document_text[:4000]}
-
-        Respond with JSON only:
-        {{
-            "summary": "brief summary of the document",
-            "key_points": ["list of key care points"],
-            "watering_schedule": "extracted watering info",
-            "fertilizing_schedule": "extracted fertilizing info",
-            "light_requirements": "extracted light info",
-            "warnings": ["any important warnings or cautions"],
-            "action_items": ["suggested actions based on the document"]
-        }}
-        """
-        try:
-            client = GroqService._client(json_mode=True)
-            response = await client.ainvoke([HumanMessage(content=prompt)])
-            return json.loads(response.content)
-        except Exception as e:
-            print(f"Groq Document Analysis Error: {e}")
-            return {
-                "summary": "Document analysis failed",
-                "key_points": [],
-                "error": str(e)
-            }
-
-    @staticmethod
     async def generate_recommendations(user_id: str, count: int = 3) -> List[Dict[str, Any]]:
         """
         Generate personalized plant recommendations grounded in the user's own garden,
@@ -275,13 +270,9 @@ class GroqService:
             }}]
             """
 
-            tools = _build_tools(user_id)
-            agent = create_react_agent(GroqService._client(), tools)
-            result = await agent.ainvoke(
-                {"messages": [SystemMessage(content=PLANT_MIND_SYSTEM_PROMPT), HumanMessage(content=prompt)]},
-                config={"recursion_limit": 8}
-            )
-            content = result["messages"][-1].content
+            executor = GroqService._build_agent_executor(user_id, PLANT_MIND_SYSTEM_PROMPT)
+            result = await executor.ainvoke({"input": prompt, "chat_history": []})
+            content = result["output"]
             parsed = GroqService._extract_json_array(content)
 
             recommendations = []

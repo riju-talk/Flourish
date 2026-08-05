@@ -23,7 +23,8 @@
 - [x] React + Vite frontend with routing, auth, shadcn/ui, dark mode.
 - [x] Core CRUD: profiles, plants, tasks, notifications, health checks.
 - [x] Auth flow (Google Sign-In → token → profile creation) complete.
-- [x] Dashboard, calendar, chat, documents, leaderboard, plant lookup pages.
+- [x] Dashboard, calendar, chat, leaderboard, plant lookup pages (a documents/AI
+      document-analysis page shipped here too, later removed — see below).
 - [x] Backend + frontend test suites, CI (`ci.yml`).
 - [x] Documentation set in `docs/`, hardened `.gitignore` for the service-account key.
 
@@ -59,18 +60,20 @@ new AI surface area on top of it.
 
 **Goal:** Retire Ollama; make PlantMind a genuine tool-using agent, built on LangChain.
 
-- [x] Added `GroqService` (`groq_service.py`) on **LangChain** (`langchain-groq` +
-      `langgraph`); ported chat, agentic plant lookup, document analysis, and health
+- [x] Added `GroqService` (`groq_service.py`) on **plain LangChain** (`langchain`,
+      `langchain-groq` — no LangGraph); ported chat, agentic plant lookup, and health
       analysis off `OllamaService`.
 - [x] Deleted `ollama_service.py` and all `OLLAMA_*` config/env references.
 - [x] Added `TavilyService` (`tavily_service.py`, wraps `langchain-tavily`) — web
       search tool.
-- [x] Implemented the tool-calling loop via `langgraph.prebuilt.create_react_agent`
-      over four tools (`get_user_garden`, `get_task_history`, `get_weather`,
-      `web_search`), bounded by `recursion_limit` (per `01-PRD.md` §9 constraints).
+- [x] Implemented the tool-calling loop via `langchain.agents.AgentExecutor` +
+      `create_tool_calling_agent` over four tools (`get_user_garden`,
+      `get_task_history`, `get_weather`, `web_search`), bounded by `max_iterations`
+      (per `01-PRD.md` §9 constraints). Originally built on `langgraph.prebuilt.create_react_agent`,
+      then rebuilt on plain LangChain per explicit instruction — see Hardening pass below.
 - [x] Follow-up suggestions after every PlantMind response.
-- [x] Updated `apps/api/requirements.txt` / `pyproject.toml` (added `langchain-groq`,
-      `langchain-tavily`, `langgraph`; dropped `ollama`) and `apps/api/.env`.
+- [x] Updated `apps/api/requirements.txt` / `pyproject.toml` (added `langchain`,
+      `langchain-groq`, `langchain-tavily`; dropped `ollama`) and `apps/api/.env`.
 - [x] `profiles.agent_profile` is now updated after chat interactions
       (`GroqService.update_agent_profile_summary`, deterministic/no extra LLM call) —
       no longer a stub.
@@ -147,6 +150,98 @@ scheduled — with a durable per-user record of what was sent.
 - [ ] **Not executed** — no live Render/Vercel deploy has been performed, and
       `firebase ext:install` hasn't been run. Both require the account owner's
       credentials/login, which this agent doesn't have. Follow the README runbook.
+- [x] `apps/api/Dockerfile` fixed and verified (builds, boots, `/health` responds) —
+      an alternative to Render's native Python runtime. Bumped 3.11 → 3.12, fixed a
+      broken `curl`-based healthcheck (not present in the slim image), added
+      `.dockerignore` (the old Dockerfile would have baked `.venv` and `.env` — with
+      secrets — straight into the image). `npm run docker:build:api` /
+      `docker:run:api` at the repo root.
+
+---
+
+## Hardening pass — ✅ Done
+
+**Goal:** Fix real bugs surfaced by actually running the app, not just reading it.
+
+- [x] **Removed the Document Analyzer feature entirely** — `/api/documents` route,
+      `DocumentAnalyzer.tsx`, `Documents.tsx` page, `GroqService.analyze_document`,
+      the file-upload affordance in Chat, and the PyPDF2/Pillow/pytesseract
+      dependencies it needed. A deliberate removal, not a stub — see the note in
+      Known gaps below.
+- [x] **Fixed `npm run dev` at the monorepo level.** Root `package.json`'s `*:api`
+      scripts called bare `python`, which resolved to an unrelated system Python with
+      none of the project's dependencies — `npm run dev` never actually worked. Now
+      points at `apps/api/.venv/Scripts/python.exe` directly (also fixed the venv
+      itself, which was missing `pip`). Verified: `npm run dev:api` boots and
+      `/health` responds.
+- [x] **Fixed a real authentication bug, not just a style one.** `core/auth.py`
+      initialized Firebase Admin **eagerly at module import time** — meaning the
+      *entire app*, including `/health` (used by the keep-alive ping and Render's own
+      health check), crashed on startup whenever `FIREBASE_SERVICE_ACCOUNT_KEY` was
+      missing or invalid. Confirmed by reproducing the crash in the newly-fixed Docker
+      container. Rewrote it to initialize lazily on first authenticated request,
+      mirroring `FirestoreDB.get_db()`'s existing lazy pattern — `/health` now works
+      regardless of Firebase config, and a misconfigured key now fails one request
+      with a clear 500 instead of taking the whole process down.
+- [x] **Fixed frontend token staleness.** `integrations/api.ts`'s axios interceptor
+      read a Firebase ID token from `localStorage` that was set once at sign-in and
+      never refreshed — since ID tokens expire after ~1 hour, every API call would
+      start failing with 401s partway through a session even though the user was
+      still signed in. Now calls `auth.currentUser.getIdToken()` per request (cheap —
+      Firebase caches and only refreshes over the network when actually near expiry),
+      falling back to `localStorage` only for the brief window before Firebase's auth
+      state has hydrated.
+- [x] **Unsplash now uses all three of its credentials correctly.** Added
+      `UNSPLASH_APPLICATION_ID` and `UNSPLASH_SECRET_KEY` to settings/`.env` alongside
+      the existing `UNSPLASH_ACCESS_KEY` (the only one Unsplash's search endpoint
+      actually needs as `client_id`). Also implemented the download-tracking ping
+      Unsplash's API Guidelines require when a fetched photo is actually used, not
+      just searched.
+- [x] **Firebase Admin credentials moved from a JSON key file to individual env
+      vars.** `core/auth.py` now builds a credentials dict from `FIREBASE_PROJECT_ID` /
+      `_PRIVATE_KEY_ID` / `_PRIVATE_KEY` / `_CLIENT_EMAIL` / `_CLIENT_ID` /
+      `_CLIENT_X509_CERT_URL` (plus fixed-default OAuth endpoint fields) instead of
+      reading a file path — there is no service-account JSON anywhere in the repo or
+      the deployed container anymore. `setup_database.py` reuses the same
+      `ensure_firebase_initialized()` helper instead of duplicating the old file-path
+      logic. Verified: `credentials.Certificate(dict)` parses the PEM and
+      `firebase_admin.initialize_app()` succeeds with zero files on disk.
+- [x] **LLM backbone switched to `qwen/qwen3.6-27b`** (still served via Groq —
+      `GROQ_MODEL` in `core/config.py` and `.env`; no code changes needed since
+      `GroqService` already read the model from settings rather than hardcoding it).
+
+---
+
+## Design & agent-framework polish — ✅ Done
+
+**Goal:** Motion, branding, and agent-framework refinements requested after seeing the
+app running.
+
+- [x] **Slower, softer motion throughout.** Base transitions and hover effects moved
+      from ~300ms to 500-1000ms with `ease-out`; Tailwind's built-in `animate-bounce`
+      (branded loaders, chat typing indicator) globally overridden to a 2.4s smooth
+      cubic-bezier instead of the default snappy 1s bounce.
+- [x] **Animations removed entirely from the Auth screen and the splash/loading
+      screens** (`SplashScreen.tsx`, extracted from three duplicated blocks in
+      `App.tsx`) - both are now fully static except the functional sign-in spinner.
+- [x] **Dashboard:** added a "New Plants Recommended For You" card below Botanist
+      Wisdom, linking to `/recommendations`.
+- [x] **Footer** (`Footer.tsx`) added to Dashboard, Calendar, Leaderboard, Plant
+      Lookup, and Recommendations - deliberately not Chat, whose fixed-height pinned-input
+      layout a footer would break.
+- [x] **Leaderboard rebuilt with a podium-style top 3** (center-elevated rank 1) above
+      the rankings list.
+- [x] **Real brand logo wired in** (`public/logo.png` opaque/white-background,
+      `public/logo_transparent.png` transparent) replacing the generic lucide `Leaf`
+      icon in Navbar, Auth, Footer, Onboarding, and the splash screen. The opaque
+      variant is used on light surfaces (Navbar, Auth's sign-in panel); the transparent
+      variant on colored/dark surfaces (Auth's brand panel, Footer, splash screen,
+      Onboarding's icon badge) so no white box artifact shows.
+- [x] **LangGraph removed - plain LangChain only.** `GroqService`'s agent was
+      rebuilt on `langchain.agents.AgentExecutor` + `create_tool_calling_agent`
+      instead of `langgraph.prebuilt.create_react_agent`, per explicit instruction.
+      Dropped `langgraph` from `requirements.txt`/`pyproject.toml`, added `langchain`
+      directly (previously only a transitive dependency).
 
 ---
 
@@ -157,7 +252,6 @@ Deliberately not part of the current push.
 - [ ] Wire **Plant.ID** species identification into the plant-add flow.
 - [ ] Implement **real image health analysis** (e.g. a Groq vision-capable model),
       replacing the current mock stub.
-- [ ] OCR pipeline (tesseract) for printed care guides and image documents.
 - [ ] Weather-aware scheduling: shift watering days based on local conditions.
 - [ ] Weekly/monthly leaderboard periods.
 - [ ] Achievements & badges catalog + reward notifications (list drafted in
@@ -188,15 +282,24 @@ Deliberately not part of the current push.
 | Phase 3 — Personalized Plant Recommendations | ✅ Done |
 | Phase 4 — Automated Notifications & Email | ✅ Done |
 | Deployment | ✅ Configs in place — not yet executed (needs your login) |
+| Hardening pass (dev script, auth, Docker, Unsplash) | ✅ Done |
+| Design & agent-framework polish (motion, branding, LangChain-only) | ✅ Done |
 | Backlog — Intelligence, Community & Scale | ⬜ Not started |
 
 ---
 
 ## Known gaps to watch
-- `UNSPLASH_ACCESS_KEY` is blank in `apps/api/.env` — `PlantService` now reads it
-  correctly (fixed the old hardcoded-`"demo"` bug), but falls back to Unsplash's
-  heavily-rate-limited public `demo` client ID until a real key is added.
-- Image analysis, Plant.ID, and OCR are scaffolded but not live (Backlog).
+- **Rotate the Firebase service-account key.** It was pasted directly into a chat
+  session to populate `apps/api/.env`'s `FIREBASE_*` fields, meaning it's recorded in
+  that conversation's transcript. Generate a new key in Firebase Console → Project
+  Settings → Service Accounts, update `.env` (and Render's env vars once deployed),
+  then revoke the old one (`private_key_id` starting `e8bf27ed5b...` at time of
+  writing). Not yet done as of this entry.
+- Image analysis and Plant.ID are scaffolded but not live (Backlog).
+- The Document Analyzer feature (upload PDF/TXT → AI care info) was removed entirely
+  (route, frontend page/component, `GroqService.analyze_document`, and the
+  PyPDF2/Pillow/pytesseract dependencies it needed). Not a stub to revisit — a
+  deliberate removal.
 - `AutonomousPlantService` is imported but its `identify_and_create_plant` is never
   called (the `/plants/autonomous` route uses the Groq agent directly).
 - `PlantIDService.identify_plant` is not wired to any route.

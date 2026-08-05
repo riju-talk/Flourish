@@ -15,20 +15,35 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
-        value: "llama-3.3-70b-versatile"
+        value: "qwen/qwen3.6-27b"
       - key: TAVILY_API_KEY
         sync: false
       - key: OPENWEATHER_API_KEY
         sync: false
       - key: PLANT_ID_API_KEY
         sync: false
+      - key: UNSPLASH_APPLICATION_ID
+        sync: false
       - key: UNSPLASH_ACCESS_KEY
         sync: false
-      # Points at the Render "Secret File" mount path (e.g. /etc/secrets/<filename>),
-      # not a literal key - upload the service-account JSON as a Secret File in the
-      # Render dashboard, then set this to its mounted path. Never paste the raw JSON
-      # into this file. See docs/02-Tech-Stack-Architecture.md §6.
-      - key: FIREBASE_SERVICE_ACCOUNT_KEY
+      - key: UNSPLASH_SECRET_KEY
+        sync: false
+      # Firebase Admin credentials - individual service-account fields, no key file /
+      # Secret File needed anywhere. Set each of these in the Render dashboard from
+      # the downloaded JSON. FIREBASE_PRIVATE_KEY must keep its literal \n sequences
+      # (paste it exactly as it appears in the JSON's "private_key" field, in quotes).
+      # See docs/02-Tech-Stack-Architecture.md §6.
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY_ID
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_CLIENT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_X509_CERT_URL
         sync: false
       - key: SECRET_KEY
         generateValue: true

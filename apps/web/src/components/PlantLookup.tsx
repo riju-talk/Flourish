@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Search, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { lookupPlant, createAutonomousPlant } from '@/integrations/api';
@@ -71,39 +71,51 @@ export default function PlantLookup() {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      <Card>
-        <CardHeader>
-          <CardTitle>🔍 Agentic Plant Lookup</CardTitle>
-          <CardDescription>
-            Type any plant name to get comprehensive care information powered by AI
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex space-x-2 mb-6">
-            <Input
-              placeholder="e.g., Monstera Deliciosa, Snake Plant, Peace Lily..."
-              value={plantName}
-              onChange={(e) => setPlantName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
-              disabled={loading}
-            />
-            <Button onClick={handleLookup} disabled={loading || !plantName.trim()}>
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Looking up...
-                </>
-              ) : (
-                <>
-                  <Search className="h-4 w-4 mr-2" />
-                  Lookup
-                </>
-              )}
-            </Button>
-          </div>
+    <div className="container mx-auto px-4 py-14 max-w-4xl">
+      <div className="text-center mb-10">
+        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-3">
+          Discovery Engine
+        </p>
+        <h1 className="font-serif text-4xl md:text-5xl font-semibold text-foreground mb-4">
+          Agentic Plant Lookup
+        </h1>
+        <p className="text-muted-foreground max-w-xl mx-auto">
+          Harness our botanical AI to instantly identify flora, diagnose issues, or
+          uncover specialized care protocols. Enter a plant name below.
+        </p>
+      </div>
 
-          {plantInfo && (
+      <div className="glass-card p-3 flex gap-2 mb-10 max-w-2xl mx-auto">
+        <Input
+          placeholder="e.g., Monstera Deliciosa, Snake Plant, Peace Lily..."
+          value={plantName}
+          onChange={(e) => setPlantName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
+          disabled={loading}
+          className="border-none bg-transparent focus-visible:ring-0"
+        />
+        <Button
+          onClick={handleLookup}
+          disabled={loading || !plantName.trim()}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shrink-0"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Looking up...
+            </>
+          ) : (
+            <>
+              <Search className="h-4 w-4 mr-2" />
+              Analyze
+            </>
+          )}
+        </Button>
+      </div>
+
+      {plantInfo && (
+        <Card>
+          <CardContent className="pt-6">
             <div className="space-y-6">
               {/* Header with Image */}
               <div className="flex flex-col md:flex-row gap-6">
@@ -270,9 +282,9 @@ export default function PlantLookup() {
                 </TabsContent>
               </Tabs>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Droplets, FlaskConical, ClipboardCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Droplets, FlaskConical, ClipboardCheck } from 'lucide-react';
 import { getCalendarEvents, getTodayTasks } from '@/integrations/api';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -40,7 +40,7 @@ const CareCalendar: React.FC = () => {
       days.push(
         <div
           key={day}
-          className={`min-h-[100px] p-3 glass-card rounded-2xl transition-all hover:bg-white/60 ${isToday ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : ''
+          className={`min-h-[100px] p-3 glass-card transition-all hover:bg-secondary/40 ${isToday ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : ''
             }`}
         >
           <div className={`font-bold text-sm mb-2 ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
@@ -57,21 +57,18 @@ const CareCalendar: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-700">
+    <div className="container mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-1000 ease-out">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
-            Care Calendar <CalendarIcon className="h-6 w-6" />
+          <h1 className="font-serif text-3xl md:text-4xl font-semibold text-foreground">
+            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
           </h1>
-          <p className="text-muted-foreground">Keep track of your botanical duties.</p>
+          <p className="text-muted-foreground">Cultivate your collection with precision and care.</p>
         </div>
-        <div className="flex items-center gap-4 glass-card px-4 py-2 rounded-2xl">
+        <div className="flex items-center gap-2 glass-card px-2 py-2">
           <Button variant="ghost" size="icon" onClick={previousMonth} className="hover:bg-primary/10">
             <ChevronLeft size={20} />
           </Button>
-          <span className="font-bold text-lg min-w-[140px] text-center">
-            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-          </span>
           <Button variant="ghost" size="icon" onClick={nextMonth} className="hover:bg-primary/10">
             <ChevronRight size={20} />
           </Button>
@@ -89,13 +86,13 @@ const CareCalendar: React.FC = () => {
         ) : renderCalendarDays()}
       </div>
 
-      <section className="glass-card p-6 rounded-3xl space-y-4">
-        <h2 className="text-xl font-bold flex items-center gap-2">
+      <section className="glass-card p-6 space-y-4">
+        <h2 className="font-serif text-xl font-semibold flex items-center gap-2">
           Upcoming for Today <ClipboardCheck className="h-5 w-5 text-primary" />
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {schedule?.map((task: any) => (
-            <div key={task.id} className="p-4 rounded-2xl bg-white/40 border border-white/20 flex items-center gap-4">
+            <div key={task.id} className="p-4 rounded-2xl bg-secondary/40 border border-border flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 {task.task_type === 'watering' ? <Droplets className="text-blue-500" /> : <FlaskConical className="text-purple-500" />}
               </div>

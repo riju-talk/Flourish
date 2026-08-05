@@ -41,12 +41,10 @@ class FirestoreDB:
             if doc.exists:
                 data = doc.to_dict()
                 data['id'] = doc.id
-                print(f"📖 Found profile for {user_id}")
                 return data
-            print(f"❌ No profile found for {user_id}")
             return None
         except Exception as e:
-            print(f"❌ Error getting profile for {user_id}: {e}")
+            print(f"Error getting profile for {user_id}: {e}")
             return None
     
     @staticmethod
@@ -98,7 +96,7 @@ class FirestoreDB:
             profile_data['id'] = user_id
             return profile_data
         except Exception as e:
-            print(f"❌ Error creating profile for {user_id}: {e}")
+            print(f"Error creating profile for {user_id}: {e}")
             raise
 
     @staticmethod
