@@ -1,15 +1,15 @@
-Flourish — Design System & UX Rulebook v3.0
+Flourish: Design System & UX Rulebook v3.0
 A production-grade design system for the "Botanical Journal" experience.
 Version: 3.0 · Last updated: 2026-08-05
 
 > **v3.0 supersedes "Cosmic Garden" (v2.0).** The glassmorphism/emerald-gradient
-> aesthetic has been fully replaced by a warmer, editorial look — cream backgrounds,
+> look is gone, replaced by something warmer and more editorial: cream backgrounds,
 > a deep forest-green primary, a serif display face paired with a clean sans for UI,
-> and flat/solid cards instead of blurred glass. Navigation is a **single top navbar
-> everywhere** — there is no sidebar anywhere in the app, on any page. Section numbers
-> below are unchanged from v2.0 where the underlying pattern (spacing, motion,
-> accessibility, page templates) still applies; only color/typography/surface tokens
-> and the navigation pattern actually changed.
+> and flat, solid cards instead of blurred glass. Navigation is now a **single top
+> navbar everywhere**, with no sidebar anywhere in the app, on any page. Section
+> numbers below are unchanged from v2.0 where the underlying pattern (spacing, motion,
+> accessibility, page templates) still applies. Only the color, typography, and
+> surface tokens, along with the navigation pattern, actually changed.
 Table of Contents
 Design Identity
 Design Tokens
@@ -27,19 +27,19 @@ Accessibility (A11y)
 Responsive Behavior
 Brand Voice & Microcopy
 UX Rules
-1. Design Identity — "Botanical Journal"
+1. Design Identity ("Botanical Journal")
 Flourish reads like a premium field journal for plant people: warm cream paper, deep
-forest-green ink, an elegant serif for headlines, generous whitespace. Confident and
-editorial, not glassy or "techy."
+forest-green ink, an elegant serif for headlines, and generous whitespace. It's
+confident and editorial, never glassy or "techy."
 Core Principles
 Table
 Principle	Description
 Warm	Cream backgrounds, deep forest-green accents, and friendly microcopy replace cold clinical interfaces.
-Editorial	A serif display face for headings gives the app a considered, journal-like feel — never a gimmick font.
+Editorial	A serif display face for headings gives the app a considered, journal-like feel, never a gimmick font.
 Calm & flat	Solid cards with soft shadows, not blur/glass. No jarring transitions, no harsh reds. Errors are handled gracefully.
-Uncluttered	One navigation surface (the top navbar) on every page — no sidebar, no competing nav patterns.
+Uncluttered	One navigation surface (the top navbar) on every page, with no sidebar and no competing nav patterns.
 Brand Personality
-Voice: Your knowledgeable, encouraging gardening friend — not a botanist professor.
+Voice: Your knowledgeable, encouraging gardening friend, not a botanist professor.
 Tone: Warm, playful, confident. Never apologetic for being helpful.
 Metaphors: Growth, seasons, nurturing, blooming, roots, sunlight.
 2. Design Tokens
@@ -51,11 +51,11 @@ Color Palette
 Light Mode (:root)
 Table
 Token	HSL Value	Usage
---background	40 30% 96%	App canvas — warm cream
---foreground	155 35% 12%	Primary text — deep forest green-black
+--background	40 30% 96%	App canvas, warm cream
+--foreground	155 35% 12%	Primary text, deep forest green-black
 --card	40 35% 99%	Elevated surfaces (near-white warm)
 --popover	40 35% 99%	Dropdowns, tooltips, menus
---primary	155 45% 18%	Deep forest green — CTAs, focus, active states, logo
+--primary	155 45% 18%	Deep forest green for CTAs, focus, active states, and logo
 --primary-foreground	40 30% 98%	Cream/white text on primary
 --secondary	140 20% 92%	Soft sage/mint surfaces, secondary buttons
 --muted	35 15% 93%	Subtle backgrounds, disabled states
@@ -100,7 +100,7 @@ Warning	hsl(38 92% 50%)	hsl(38 90% 55%)	Needs attention, upcoming tasks
 Info	hsl(200 90% 45%)	hsl(200 85% 55%)	Tips, educational content
 Error	hsl(0 72% 51%)	hsl(0 62% 50%)	Failures, destructive actions
 Card Surface Tokens (formerly "Glassmorphism")
-Cards are now flat and solid — no backdrop blur. The token names kept the `--glass-*`
+Cards are now flat and solid, with no backdrop blur. The token names kept the `--glass-*`
 prefix so existing `.glass-card` markup across the app didn't need to change, but the
 values now describe a plain card with a soft shadow:
 css
@@ -110,11 +110,11 @@ css
 --glass-shadow:    0 1px 2px hsl(30 20% 20% / 0.04), 0 8px 24px hsl(30 20% 20% / 0.06);
 3. Typography System
 Font Family
-Display/headings: **Fraunces** (Google Fonts, `font-serif`) — a warm, editorial serif
+Display/headings: **Fraunces** (Google Fonts, `font-serif`), a warm, editorial serif
 used for the wordmark, page titles, and section headings. This is the single biggest
-visual signal of the new identity; don't fall back to the sans for anything that reads
+visual signal of the new identity, so don't fall back to the sans for anything that reads
 as a "headline."
-Body/UI: **Outfit** (Google Fonts, default `font-sans`) — geometric, friendly, modern.
+Body/UI: **Outfit** (Google Fonts, default `font-sans`), geometric, friendly, and modern.
 Used for body copy, nav links, buttons, form inputs, everything that isn't a headline.
 Monospace: JetBrains Mono (for data, timestamps, debug info only).
 Type Scale
@@ -130,10 +130,10 @@ body-sm	0.875rem (14px)	400	1.5	0	Secondary text, descriptions
 caption	0.75rem (12px)	500	1.4	0.01em	Labels, metadata, timestamps
 overline	0.6875rem (11px)	600	1.2	0.08em	ALL CAPS section labels
 Text Color Hierarchy
-Primary text: text-foreground — names, headings, key data.
-Secondary text: text-muted-foreground — descriptions, hints, timestamps.
-Tertiary text: text-muted-foreground/60 — metadata, disabled hints.
-Emphasis: text-primary — links, active states, scores.
+Primary text: text-foreground, for names, headings, key data.
+Secondary text: text-muted-foreground, for descriptions, hints, timestamps.
+Tertiary text: text-muted-foreground/60, for metadata, disabled hints.
+Emphasis: text-primary, for links, active states, scores.
 Gradient accent: .text-gradient for hero headlines only.
 4. Elevation & Shadows
 Shadow Scale
@@ -157,7 +157,7 @@ Toast	300	Notifications, toasts
 Tooltip	400	Tooltips, popovers
 Loader	500	Full-screen loaders
 5. Spacing Scale
-Based on 0.25rem (4px) increments. Use these consistently — no arbitrary values.
+Based on 0.25rem (4px) increments. Use these consistently, not arbitrary values.
 Table
 Token	Value	Usage
 space-1	0.25rem (4px)	Icon gaps, inline spacing
@@ -176,7 +176,7 @@ Content max-width: 640px for forms, 960px for dashboards, 1200px for marketing.
 Grid gap: space-6 (24px) default, space-4 on mobile.
 6. Animation & Motion
 Philosophy
-Motion should feel like a gentle breeze — noticeable but never distracting. Every animation must serve a purpose: orientation, feedback, or delight.
+Motion should feel like a gentle breeze, noticeable but never distracting. Every animation has to serve a purpose: orientation, feedback, or delight.
 Timing Tokens
 Table
 Token	Duration	Usage
@@ -254,7 +254,7 @@ css
 }
 Motion Rules
 Respect prefers-reduced-motion: All animations must have @media (prefers-reduced-motion: reduce) fallbacks that snap instantly.
-Never animate layout properties (width, height, top, left) — use transform and opacity only for 60fps performance.
+Never animate layout properties (width, height, top, left). Use transform and opacity only, for 60fps performance.
 Loading states: Always show a branded loader or skeleton. Never leave blank space.
 Page transitions: Use AnimatePresence with a gentle fade + 8px slide. Duration: 300ms.
 7. Layout Patterns
@@ -304,7 +304,7 @@ css
 }
 Anatomy:
 Padding: space-5 (20px) default, space-6 (24px) for feature cards.
-No internal borders — use space-4 gaps and dividers instead.
+No internal borders; use space-4 gaps and dividers instead.
 Header (optional): flex row, justify-between, items-center, bottom margin space-4.
 Footer (optional): flex row, justify-end, top margin space-4, top border border-border.
 8.2 Primary Button
@@ -335,7 +335,7 @@ Padding:       space-3 vertical, space-4 horizontal
 plain
 Background:    hsl(var(--background))
 Border:        1px solid hsl(var(--input))
-Border-radius: 0.75rem (12px) — slightly tighter than cards
+Border-radius: 0.75rem (12px), slightly tighter than cards
 Padding:       space-3 vertical, space-4 horizontal
 Focus:         ring-2 ring-primary ring-offset-2 ring-offset-background
 Placeholder:   text-muted-foreground/50
@@ -356,7 +356,7 @@ Specs:
 Aspect ratio: aspect-[4/5] on mobile, aspect-[3/4] on desktop.
 Image: rounded-t-3xl, object-cover, lazy-loaded.
 Status badge: Absolute positioned, glass-card pill, px-3 py-1, text-xs font-medium.
-Hover: .hover-lift — translateY(-4px) + enhanced shadow.
+Hover: .hover-lift, translateY(-4px) + enhanced shadow.
 8.6 Recommendation Card
 plain
 ┌─────────────────────────────────────┐
@@ -419,7 +419,7 @@ Background: Full-bleed mesh gradient (fixed), animated ambient orbs.
 Card: Glass card, space-8 padding, shadow-xl.
 Header: App logo + "Welcome back, gardener" (display-sm, text-gradient).
 Form: Email + password inputs, primary CTA "Sign In", divider "or", OAuth buttons.
-Footer: "Don't have an account? Sign up" — muted link.
+Footer: "Don't have an account? Sign up" as a muted link.
 9.2 Onboarding Page (/onboarding)
 Gate: Redirect here immediately after first sign-in if no profile exists. No skip.
 Layout: Centered, max-width 480px, generous vertical padding (space-16).
@@ -427,12 +427,12 @@ Card: Glass card, space-8 padding, shadow-xl.
 Header: "Let's get you growing" + subtitle "Tell us a bit about yourself."
 Form: Full name + phone number inputs, primary CTA "Start My Garden".
 Loading: Branded "Flourishing..." loader while profile creates, then redirect to /garden.
-Progress: Single step — no stepper UI needed. Keep it focused.
+Progress: Single step, no stepper UI needed. Keep it focused.
 9.3 Garden Dashboard (/garden)
 Header: Personalized greeting ("Good morning, Alex!"), date, weather widget.
 Main (8 cols):
 Plant grid: 3 columns desktop, responsive.
-"Add Plant" floating action button (FAB) — primary, bottom-right, shadow-glow.
+"Add Plant" floating action button (FAB): primary, bottom-right, shadow-glow.
 Sidebar (4 cols):
 Daily checklist (collapsible).
 Quick stats (streak, total plants, health score).
@@ -440,7 +440,7 @@ Leaderboard preview (top 3 + "View All" link).
 PlantMind quick chat button.
 9.4 Plant Detail Page (/garden/[id])
 Hero: Large plant image (40vh), gradient overlay, plant name + scientific name.
-Stats row: Sun, water, temperature, humidity — icon + value cards in a row.
+Stats row: Sun, water, temperature, humidity, as icon + value cards in a row.
 Care log: Timeline of past care actions, add new action FAB.
 Notes: Editable notes section, auto-save.
 Delete: Destructive button at bottom, requires confirmation modal.
@@ -519,7 +519,7 @@ Progress indicators: For multi-step actions (image upload, AI generation), use a
 Haptic & Sound (Mobile)
 Success: Light haptic feedback on task completion.
 Error: Medium haptic on validation failure.
-No sound by default — respect quiet environments.
+No sound by default, out of respect for quiet environments.
 13. Accessibility (A11y)
 WCAG Compliance Target: AA
 Color & Contrast
@@ -534,7 +534,7 @@ Return focus: On modal close, return focus to the element that triggered it.
 Skip links: Provide "Skip to main content" link for keyboard users.
 Screen Readers
 Landmarks: Use <main>, <nav>, <aside>, <header>, <footer>.
-Headings: Logical hierarchy — never skip levels (h1 → h3).
+Headings: Logical hierarchy; never skip levels (h1 → h3).
 Images: All informative images have alt text. Decorative images have alt="".
 Icons: All lucide-react icons in buttons must have aria-label or aria-hidden.
 Live regions: Use aria-live="polite" for toast announcements, dynamic score updates.
@@ -596,7 +596,7 @@ Loading:
 "Watering the servers..."
 "Growing your recommendations..."
 Errors (friendly):
-"Oops — something didn't sprout."
+"Oops, something didn't sprout."
 "Our servers are having a moment."
 "Couldn't connect to the greenhouse."
 16. UX Rules
@@ -610,28 +610,28 @@ Returning users: Never see onboarding. Land directly on /garden.
 Optimistic UI: Update the interface immediately on user actions (add plant, mark done). Roll back with an error toast if the server fails.
 React Query invalidation: Invalidate relevant queries after mutations. Stale data is a bug.
 Skeleton loading: Use <Skeleton> components that match the final layout dimensions. Never use generic spinners for content areas.
-Toasts on every action: Success, error, or info — the user must know their action registered.
+Toasts on every action: success, error, or info. The user must always know their action registered.
 Auto-save: Settings and notes auto-save. Show a subtle "Saved" indicator, not a blocking toast.
 16.3 Layout & Visual
 Consistent container: container mx-auto px-4 sm:px-6 lg:px-8 on all pages.
-Section rhythm: Consistent vertical spacing — space-10 between major sections, space-6 within sections.
+Section rhythm: Consistent vertical spacing, space-10 between major sections, space-6 within sections.
 Responsive grids: grid-cols-1 → sm:grid-cols-2 → lg:grid-cols-3 for cards. Dashboard uses 12-col layout (8/4 split on desktop).
 Glass cards as default: All content surfaces should use .glass-card or shadcn Card with glass overrides.
 Gradient buttons for primary actions only. Secondary and tertiary actions use solid or ghost styles.
 16.4 Motion & Interaction
 Gentle entry animations: animate-in fade-in slide-in-from-bottom-4 for page content, duration-300.
-Hover-lift on all cards: Interactive cards must have .hover-lift — translateY(-4px) + enhanced shadow.
+Hover-lift on all cards: Interactive cards must have .hover-lift, translateY(-4px) + enhanced shadow.
 Ambient motion in moderation: .animate-float for decorative elements, .leaf-pulse for status indicators. Never on primary content.
 No layout shift: Buttons maintain size in loading state. Images have defined aspect ratios.
 Reduced motion respect: All animations must have prefers-reduced-motion fallbacks.
 16.5 AI & Recommendations
-Follow-up chips: Every PlantMind response renders 2–4 tappable follow-up suggestion chips below the message. Small, secondary-styled pill buttons, never more than one row on mobile.
+Follow-up chips: Every PlantMind response renders 2-4 tappable follow-up suggestion chips below the message, as small, secondary-styled pill buttons. Never more than one row on mobile.
 Recommendation cards: Plant image/icon, name, short reasoning blurb (why it fits this user), "Add to my garden" primary CTA, subtle dismiss (×) action.
 Sourced affordance: If Tavily sources were used, show a small link icon ("Sourced") rather than raw URLs in the card body. Click opens reference in new tab.
 AI transparency: Always label AI-generated content. PlantMind messages should be clearly from the assistant.
 16.6 Leaderboard & Social
 Contact info display: Each leaderboard row shows email and phone as secondary, muted text beneath the name/score. Use small Mail / Phone lucide icons + text-muted-foreground. Keep name, avatar, and score visually dominant.
-Rank styling: Top 3 get special treatment — gold/silver/bronze tint or left border. Your own row is always highlighted.
+Rank styling: Top 3 get special treatment, a gold/silver/bronze tint or left border. Your own row is always highlighted.
 Privacy: Contact info only visible to authenticated users. Never expose in public API responses without auth.
 16.7 Forms & Input
 Label every input: Never rely on placeholder text as the only label.

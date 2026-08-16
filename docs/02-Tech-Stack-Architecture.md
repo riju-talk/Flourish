@@ -1,4 +1,4 @@
-# Flourish — Tech Stack & Architecture
+# Flourish: Tech Stack & Architecture
 
 > System design reference for the Flourish full-stack monorepo.
 > **Last updated:** 2026-08-05
@@ -11,7 +11,7 @@
 - **Workspaces:** `npm` workspaces (`apps/*`), concurrently for parallel dev.
 - **Tooling:** root `package.json` scripts (`dev`, `build`, `test`, `lint`, `install:all`, `clean`).
 
-### Frontend — `apps/web`
+### Frontend: `apps/web`
 | Concern | Choice |
 |---|---|
 | Framework | React 18.3 + TypeScript |
@@ -30,11 +30,11 @@
 
 > Note: `05-UIUX-Rulebook.md`'s Appendix B file-structure convention is written in
 > generic Next.js App Router terms (`app/`, `page.tsx`). This repo uses **Vite + React
-> Router**, not Next.js — treat that appendix as naming/organization inspiration
+> Router**, not Next.js. Treat that appendix as naming/organization inspiration
 > (route groups, component folders), not a literal directory to recreate. Actual
 > frontend routes live in `apps/web/src/pages/`, see §3.
 
-### Backend — `apps/api`
+### Backend: `apps/api`
 | Concern | Choice |
 |---|---|
 | Framework | FastAPI 0.115 + Pydantic 2.10 |
@@ -42,19 +42,19 @@
 | Auth | Firebase Admin (verify ID tokens) |
 | DB | Cloud Firestore (via `firebase-admin`) |
 | Storage | Firebase Cloud Storage |
-| LLM | **Groq** via **LangChain** (`langchain-groq` + `langchain.agents` tool-calling agent — plain LangChain, no LangGraph) — sole LLM backend (chat, agentic lookup, recommendations). Ollama has been retired; there is no local-model fallback. |
-| Agent tools | **Tavily** (web search, via `langchain-tavily`), **OpenWeatherMap** (weather), internal Firestore reads — wired as LangChain `@tool`s bound per-request to the calling user |
-| QA | Real **MCP server** (`mcp_server.py`, official `mcp` SDK + FastMCP) exposing agentic QA tools against a running instance — separate from the `/api/mcp` REST routes below, which just reuse the "MCP" label |
-| Images | **Unsplash** — fetches a representative photo for a plant by name/species; used for `plants.image_url` on add/lookup and for `recommendations.image_url` |
+| LLM | **Groq** via **LangChain** (`langchain-groq` + `langchain.agents` tool-calling agent; plain LangChain, no LangGraph). This is the sole LLM backend (chat, agentic lookup, recommendations). Ollama has been retired; there is no local-model fallback. |
+| Agent tools | **Tavily** (web search, via `langchain-tavily`), **OpenWeatherMap** (weather), internal Firestore reads, all wired as LangChain `@tool`s bound per-request to the calling user |
+| QA | Real **MCP server** (`mcp_server.py`, official `mcp` SDK + FastMCP) exposing agentic QA tools against a running instance. Separate from the `/api/mcp` REST routes below, which just reuse the "MCP" label |
+| Images | **Unsplash**, fetches a representative photo for a plant by name/species; used for `plants.image_url` on add/lookup and for `recommendations.image_url` |
 | Email | Firebase **Trigger Email** extension (Firestore-triggered via a `mail` collection), plus an in-process scheduler for automated sends (see §5) |
-| External | OpenWeatherMap, Unsplash, Plant.ID, Tavily (optional/required keys — see §6) |
+| External | OpenWeatherMap, Unsplash, Plant.ID, Tavily (optional/required keys, see §6) |
 | Tests | pytest + pytest-cov |
 
-### Firebase — Project `flourish-de908`
+### Firebase: Project `flourish-de908`
 - Authentication (Google Sign-In)
 - Cloud Firestore (NoSQL, real-time)
 - Cloud Storage bucket: `flourish-de908.firebasestorage.app`
-- **Trigger Email extension** — sends mail for docs written to the `mail` collection
+- **Trigger Email extension**, sends mail for docs written to the `mail` collection
 - Console: https://console.firebase.google.com/project/flourish-de908
 
 ### External / Optional
@@ -62,14 +62,14 @@
   recommendations) · **Unsplash** (plant photos) · OpenWeatherMap (weather) · Plant.ID
   (species ID)
 
-### Deployment — live
+### Deployment (live)
 **Vercel** (frontend) and **Render** (backend) configs are in the repo:
 `vercel.json` (root), `render.yaml` (root, `rootDir: apps/api`), and
 `.github/workflows/keep-alive.yml` (pings `/health` every 10 min so Render's free tier
-doesn't spin down between requests — this is also what makes `SchedulerService`'s
+doesn't spin down between requests, which is also what makes `SchedulerService`'s
 periodic jobs reliable). Email delivery via the Firebase **Trigger Email** extension is
 configured through `firebase.json` / `.firebaserc` / `extensions/firestore-send-email.env`.
-None of this has been *executed* (no live deploy, no `firebase ext:install` run) — that
+None of this has been *executed* (no live deploy, no `firebase ext:install` run); that
 requires the account owner's credentials. See the README's Deployment section for the
 exact steps.
 
@@ -117,9 +117,9 @@ Agent tool calls (reason → act → observe → answer):
         ──▶  web_search (Tavily)
         ──▶  internal Firestore reads (garden, tasks, agent_profile)
 
-In-process scheduler (APScheduler) fires periodic jobs while the app is running —
-digest emails, streak-risk sweeps, task-due reminders — each writing to `mail` +
-`email_logs` alongside the usual in-app `notifications`.
+In-process scheduler (APScheduler) fires periodic jobs while the app is running:
+digest emails, streak-risk sweeps, and task-due reminders, each writing to `mail`
+and `email_logs` alongside the usual in-app `notifications`.
 ```
 
 ### Key flows
@@ -127,7 +127,7 @@ digest emails, streak-risk sweeps, task-due reminders — each writing to `mail`
    GET `/api/auth/profile`. If no profile exists yet, the frontend routes to
    `/onboarding`, collects full name + phone number, then POSTs `/api/auth/profile` to
    create it (`privacy` and `notification_preferences` are initialized to their private
-   defaults at creation — see `03-Data-Schema.md`). Existing users skip straight to
+   defaults at creation; see `03-Data-Schema.md`). Existing users skip straight to
    protected routes.
 2. **API call:** Axios injects `Authorization: Bearer <token>`; FastAPI verifies the
    token via `verify_firebase_token` and extracts `uid`; ownership-scoped queries.
@@ -150,7 +150,7 @@ digest emails, streak-risk sweeps, task-due reminders — each writing to `mail`
    way an event-triggered email would.
 8. **Keep-alive:** a scheduled GitHub Actions workflow pings the backend's `/health`
    (or `/api/health`) endpoint on an interval short enough to prevent a free-tier host
-   from spinning down — this is what makes flow 7 reliable ("the app is always active").
+   from spinning down, which is what makes flow 7 reliable ("the app is always active").
    This is a lightweight CI workflow file, unrelated to the deferred `vercel.json` /
    `render.yaml` deployment configs in §1.
 
@@ -205,7 +205,7 @@ Flourish/
 ```
 
 > `start.bat`, `start.ps1`, `.replit`, root `ARCHITECTURE.md`, and `apps/api/README.md`
-> have been removed — use the `npm run dev` / `npm run build` / `npm run test` scripts
+> have been removed. Use the `npm run dev` / `npm run build` / `npm run test` scripts
 > in root `package.json` and this documentation set instead.
 
 ---
@@ -214,15 +214,15 @@ Flourish/
 
 All routers are guarded by `Depends(verify_firebase_token)`. Note: the `auth` router
 is mounted **without a router-level dependency** in `main.py`, but its `/profile`
-handlers still resolve `user_id` via the token dependency individually — **every
+handlers still resolve `user_id` via the token dependency individually, so **every
 request to `/api/auth/profile` requires a valid Firebase token**.
 
 > Naming note: `01-PRD.md` §8 lists endpoints in a generic `/api/profile`,
 > `/api/recommendations` style. This repo keeps FastAPI routers split by resource
-> prefix (`/api/auth`, `/api/plants`, ...) as already established — the table below is
+> prefix (`/api/auth`, `/api/plants`, ...) as already established. The table below is
 > the literal, accurate contract; the PRD's list is the product-level intent it maps to.
 
-### Auth — `/api/auth`
+### Auth: `/api/auth`
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/profile` | Create-or-get user profile. On **create**, `full_name` and `phone_number` are required (onboarding); privacy + notification preferences are initialized to their private defaults. |
@@ -231,7 +231,7 @@ request to `/api/auth/profile` requires a valid Firebase token**.
 | PATCH | `/profile/privacy` | Update `privacy` (public profile / show email / show phone opt-ins) |
 | PATCH | `/profile/notification-preferences` | Update `notification_preferences` |
 
-### Plants — `/api/plants`
+### Plants: `/api/plants`
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/lookup` | Agentic plant lookup (Groq) + Unsplash image |
@@ -245,7 +245,7 @@ request to `/api/auth/profile` requires a valid Firebase token**.
 | POST | `/{plant_id}/health-check` | Create health check |
 | GET | `/{plant_id}/health-checks` | Health check history |
 
-### Tasks — `/api/tasks`
+### Tasks: `/api/tasks`
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/today` | Today's incomplete tasks (priority order) |
@@ -257,12 +257,12 @@ request to `/api/auth/profile` requires a valid Firebase token**.
 | PUT | `/{task_id}` | Update task |
 | DELETE | `/{task_id}` | Delete task |
 
-### Dashboard — `/api/dashboard`
+### Dashboard: `/api/dashboard`
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/` | Aggregate overview (plants by health, today's tasks, stats) |
 
-### Chat — `/api/chat`
+### Chat: `/api/chat`
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/` | Agentic multi-modal chat (Groq) + tool calls + follow-up suggestions |
@@ -270,18 +270,18 @@ request to `/api/auth/profile` requires a valid Firebase token**.
 | GET | `/weather/{lat}/{lon}` | Weather for a location |
 | POST | `/care-plan` | Generates a structured care plan from the plant's profile, adjusted for current weather |
 
-### Images — `/api/images`
+### Images: `/api/images`
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/plant/{plant_name}` | Unsplash image by name/species |
 
-### MCP (Model Context Protocol) — `/api/mcp`
+### MCP (Model Context Protocol): `/api/mcp`
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/weather/{lat}/{lon}` | Weather + humidity-based recommendation |
 | GET | `/plant-info/{name}` | Botanical/care data via Groq |
 
-### Recommendations — `/api/recommendations`
+### Recommendations: `/api/recommendations`
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/` | List this user's pending personalized recommendations |
@@ -289,7 +289,7 @@ request to `/api/auth/profile` requires a valid Firebase token**.
 | POST | `/{id}/accept` | Accept → creates a `plants` doc, marks `status: "accepted"` |
 | POST | `/{id}/dismiss` | Dismiss → marks `status: "dismissed"`, updates `agent_profile.recommendation_preferences.avoided_plants` |
 
-### Notifications — `/api/notifications`
+### Notifications: `/api/notifications`
 | Method | Path | Purpose |
 |---|---|---|
 | WS | `/ws/{user_id}` | Real-time notification channel |
@@ -302,17 +302,17 @@ request to `/api/auth/profile` requires a valid Firebase token**.
 > Certain notification types (see `03-Data-Schema.md`) also enqueue a mirrored document
 > in `mail` **and** `email_logs`, gated by the user's `notification_preferences`.
 
-### Leaderboard — `/api/leaderboard`
+### Leaderboard: `/api/leaderboard`
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/leaderboard` | Top 100 by score: `display_name`, avatar, score, level, streak, badges, rank always; `email`/`phone_number` **only** for users who opted in via `privacy.show_email`/`show_phone` |
-| GET | `/leaderboard/me` | Current user's own rank + full stats (always includes their own contact info, regardless of their privacy flags — it's their own data) |
+| GET | `/leaderboard/me` | Current user's own rank + full stats (always includes their own contact info, regardless of their privacy flags, since it's their own data) |
 | GET | `/stats` | Detailed user stats & completion rate |
 
 > Privacy-safe by default (see `01-PRD.md` §5.10, `04-Rules-of-Engagement.md`). This
 > **replaces** the earlier all-users-see-everyone's-contact-info decision.
 
-### Storage — `/api/storage`
+### Storage: `/api/storage`
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/upload/plant-image/{plant_id}` | Upload plant image |
@@ -323,11 +323,11 @@ request to `/api/auth/profile` requires a valid Firebase token**.
 ### System
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/health` | Liveness check — also the keep-alive workflow's ping target |
+| GET | `/health` | Liveness check, also the keep-alive workflow's ping target |
 
 > Frontend note: `api.ts` references a few endpoints not currently implemented
 > server-side (`/plants/{id}/schedule`, `/plants/{id}/schedule/complete`,
-> `/tasks/generate/{id}`). Resolving this mismatch (implement or remove) is scheduled —
+> `/tasks/generate/{id}`). Resolving this mismatch (implement or remove) is scheduled;
 > see `06-Phase-Tracker.md` Phase 1.
 
 ---
@@ -335,59 +335,62 @@ request to `/api/auth/profile` requires a valid Firebase token**.
 ## 5. Services Layer Notes
 
 **Live & wired to routes:**
-- **GroqService** (`groq_service.py`, replaces the retired `ollama_service.py`) — chat +
-  context-aware follow-up suggestions, plant health analysis, agentic plant info lookup,
-  and personalized recommendations. `chat_with_ai` builds a
+- **GroqService** (`groq_service.py`, replaces the retired `ollama_service.py`) handles
+  chat plus context-aware follow-up suggestions, plant health analysis, agentic plant
+  info lookup, and personalized recommendations. `chat_with_ai` builds a
   `langchain.agents.AgentExecutor` (via `create_tool_calling_agent`) per request over
   four LangChain `@tool`s bound to the calling `user_id` (`get_user_garden`,
   `get_task_history`, `get_weather`, `web_search`), capped via `max_iterations` so the
-  reason → tool-call → observe → answer loop stays bounded. Plain LangChain only — no
-  LangGraph anywhere in this codebase. The structured-extraction methods (`analyze_plant_health`,
-  `get_plant_info_agentic`) call `ChatGroq` directly in JSON mode — no tools needed
-  there. Graceful fallback responses on errors/Groq-down (there is no local-model
-  fallback anymore).
-- **TavilyService** (`tavily_service.py`) — thin wrapper around `langchain-tavily`'s
+  reason → tool-call → observe → answer loop stays bounded. It's plain LangChain only,
+  no LangGraph anywhere in this codebase. The structured-extraction methods
+  (`analyze_plant_health`, `get_plant_info_agentic`) call `ChatGroq` directly in JSON
+  mode, no tools needed there. Fallback responses kick in gracefully on errors or when
+  Groq is down (there is no local-model fallback anymore).
+- **TavilyService** (`tavily_service.py`) is a thin wrapper around `langchain-tavily`'s
   `TavilySearch`, used as the agent's `web_search` tool for grounded, current
   information (recommendations, fact-checking care advice).
-- **WeatherService** (`weather_service.py`) — OpenWeatherMap current conditions;
-  returns mock data when no key or on error.
-- **PlantService** (`plant_service.py`) — Unsplash image fetch, used for both
+- **WeatherService** (`weather_service.py`) fetches OpenWeatherMap current conditions
+  and returns mock data when there's no key or on error.
+- **PlantService** (`plant_service.py`) handles the Unsplash image fetch, used for both
   `plants.image_url` and `recommendations.image_url` when a plant is added to the
-  garden. Reads `UNSPLASH_ACCESS_KEY` from settings (sent as `client_id`); falls back
+  garden. It reads `UNSPLASH_ACCESS_KEY` from settings (sent as `client_id`), falls back
   to Unsplash's public `demo` client ID (heavily rate-limited) when the key is blank,
-  and to a static Unsplash URL if the request fails outright. Also pings each photo's
-  `download_location` after a successful fetch, per Unsplash's API Guidelines
-  ("track a photo download" — required whenever a fetched photo is actually used, not
-  just searched). `UNSPLASH_APPLICATION_ID` and `UNSPLASH_SECRET_KEY` are read into
-  settings but not sent on any request — Unsplash's public search endpoint only needs
-  the Access Key; the other two matter only for an OAuth flow this app doesn't do.
-  Defines an unused `generate_care_schedule`.
-- **EmailService** (`email_service.py`) — writes documents to the Firestore `mail`
+  and falls back further to a static Unsplash URL if the request fails outright. It
+  also pings each photo's `download_location` after a successful fetch, per Unsplash's
+  API Guidelines ("track a photo download" is required whenever a fetched photo is
+  actually used, not just searched). `UNSPLASH_APPLICATION_ID` and
+  `UNSPLASH_SECRET_KEY` are read into settings but never sent on any request:
+  Unsplash's public search endpoint only needs the Access Key, and the other two only
+  matter for an OAuth flow this app doesn't do. It also defines an unused
+  `generate_care_schedule`.
+- **EmailService** (`email_service.py`) writes documents to the Firestore `mail`
   collection consumed by the Firebase Trigger Email extension, **and** writes the
   paired `email_logs` entry for every send, whether event- or schedule-triggered.
-- **SchedulerService** (`scheduler_service.py`, new) — an in-process APScheduler
-  instance started on app startup. Runs periodic jobs (streak-risk sweep, task-due
+- **SchedulerService** (`scheduler_service.py`, new) is an in-process APScheduler
+  instance started on app startup. It runs periodic jobs (streak-risk sweep, task-due
   digest, weekly summary) that fan out per-user through `EmailService`, gated by each
   user's `notification_preferences`. This only works reliably because the keep-alive
   workflow (§2 flow 8) keeps the process from being killed between runs.
 
 **Scaffolded / present but NOT wired to any route:**
-- **AutonomousPlantService** (`autonomous_plant_service.py`) — knowledge base (4
-  species) + schedule + inventory summary. It is **imported** in `plants.py` but its
-  `identify_and_create_plant` is **never called**. The `/plants/autonomous` route uses
-  `GroqService.get_plant_info_agentic` directly instead.
-- **PlantIDService** (`plant_id_service.py`) — Plant.ID v2 species identification.
-  `identify_plant` is **not referenced by any route** (returns mock without a key).
-- **AIService** (`ai_service.py`) — "PlantMind" persona prompt + image-analysis stub
-  (`analyze_plant_image` returns a hardcoded healthy assessment). ⚠️ `chat.py`'s
-  `/chat/care-plan` calls **`AIService.generate_care_plan`, which does not exist** — this
-  endpoint currently returns HTTP 500. `_research_plant_info` returns canned JSON.
+- **AutonomousPlantService** (`autonomous_plant_service.py`) provides a knowledge base
+  (4 species) plus schedule and inventory summary. It is **imported** in `plants.py`
+  but its `identify_and_create_plant` is **never called**. The `/plants/autonomous`
+  route uses `GroqService.get_plant_info_agentic` directly instead.
+- **PlantIDService** (`plant_id_service.py`) handles Plant.ID v2 species
+  identification. `identify_plant` is **not referenced by any route** (returns mock
+  without a key).
+- **AIService** (`ai_service.py`) holds the "PlantMind" persona prompt plus an
+  image-analysis stub (`analyze_plant_image` returns a hardcoded healthy assessment).
+  ⚠️ `chat.py`'s `/chat/care-plan` calls **`AIService.generate_care_plan`, which does
+  not exist**, so this endpoint currently returns HTTP 500. `_research_plant_info`
+  returns canned JSON.
 
 **Retired:**
-- **Ollama** — fully removed. No `OLLAMA_BASE_URL` / `OLLAMA_MODEL` config, no local
+- **Ollama** is fully removed. No `OLLAMA_BASE_URL` / `OLLAMA_MODEL` config, no local
   model dependency, no fallback chain to a local LLM.
-- **MultiModalChatService** (`multi_modal_chat.py`) — empty placeholder file (0 lines);
-  unrelated to the Groq migration.
+- **MultiModalChatService** (`multi_modal_chat.py`) is an empty placeholder file
+  (0 lines), unrelated to the Groq migration.
 
 **MCP QA server** (`apps/api/mcp_server.py`, run standalone: `python mcp_server.py`):
 | Tool | Purpose |
@@ -398,7 +401,7 @@ request to `/api/auth/profile` requires a valid Firebase token**.
 | `authenticated_request` | Make one authenticated call to any endpoint, given a caller-supplied Firebase ID token |
 | `run_smoke_suite` | Chain profile/plants/tasks/leaderboard/notifications checks into one pass/fail report |
 
-No credentials are stored in the server — QA tools take a Firebase ID token (e.g. from
+No credentials are stored in the server. QA tools take a Firebase ID token (e.g. from
 a dedicated QA account) as a call argument, not an env var. Point it at a non-default
 backend via `FLOURISH_API_BASE_URL` (defaults to `http://localhost:8000`).
 
@@ -410,22 +413,22 @@ backend via `FLOURISH_API_BASE_URL` (defaults to `http://localhost:8000`).
 | Variable | Default | Used by |
 |---|---|---|
 | `ALLOWED_ORIGINS` | localhost dev origins | CORS |
-| `GROQ_API_KEY` | "" | **Required.** GroqService — chat, lookup, recommendations |
-| `GROQ_MODEL` | `qwen/qwen3.6-27b` | GroqService — model used for both the tool-calling agent and structured extraction (LLM backbone) |
+| `GROQ_API_KEY` | "" | **Required.** GroqService: chat, lookup, recommendations |
+| `GROQ_MODEL` | `qwen/qwen3.6-27b` | GroqService, the model used for both the tool-calling agent and structured extraction (LLM backbone) |
 | `TAVILY_API_KEY` | "" | **Required for grounded recommendations.** GroqService web-search tool |
-| `UNSPLASH_APPLICATION_ID` | "" | PlantService — captured, not sent on any request (see §5) |
-| `UNSPLASH_ACCESS_KEY` | "" | PlantService — sent as `client_id`; falls back to the rate-limited public `demo` ID when blank |
-| `UNSPLASH_SECRET_KEY` | "" | PlantService — captured, not sent on any request (see §5) |
+| `UNSPLASH_APPLICATION_ID` | "" | PlantService, captured but not sent on any request (see §5) |
+| `UNSPLASH_ACCESS_KEY` | "" | PlantService, sent as `client_id`; falls back to the rate-limited public `demo` ID when blank |
+| `UNSPLASH_SECRET_KEY` | "" | PlantService, captured but not sent on any request (see §5) |
 | `PLANT_ID_API_KEY` | "" | PlantIDService (unwired) |
 | `OPENWEATHER_API_KEY` | "" | WeatherService |
-| `FIREBASE_PROJECT_ID` / `_PRIVATE_KEY_ID` / `_PRIVATE_KEY` / `_CLIENT_EMAIL` / `_CLIENT_ID` / `_CLIENT_X509_CERT_URL` | "" | Firebase Admin init — individual service-account fields, **no JSON key file anywhere**; lazily initialized on first authenticated request, not at import time (see `core/auth.py`). `FIREBASE_TYPE`, `_AUTH_URI`, `_TOKEN_URI`, `_AUTH_PROVIDER_X509_CERT_URL`, `_UNIVERSE_DOMAIN` default to the standard Google values and rarely need overriding. |
+| `FIREBASE_PROJECT_ID` / `_PRIVATE_KEY_ID` / `_PRIVATE_KEY` / `_CLIENT_EMAIL` / `_CLIENT_ID` / `_CLIENT_X509_CERT_URL` | "" | Firebase Admin init: individual service-account fields, **no JSON key file anywhere**; lazily initialized on first authenticated request, not at import time (see `core/auth.py`). `FIREBASE_TYPE`, `_AUTH_URI`, `_TOKEN_URI`, `_AUTH_PROVIDER_X509_CERT_URL`, `_UNIVERSE_DOMAIN` default to the standard Google values and rarely need overriding. |
 | `SECRET_KEY` | placeholder | unused (Firebase auth) |
 
 > Never commit real values for the `FIREBASE_*` fields (see `04-Rules-of-Engagement.md`
-> Rule 5) — `apps/api/.env` is git-ignored. `FIREBASE_PRIVATE_KEY` must keep its
+> Rule 5); `apps/api/.env` is git-ignored. `FIREBASE_PRIVATE_KEY` must keep its
 > literal `\n` line breaks (wrap the value in double quotes in `.env`); pydantic-settings
 > converts them to real newlines when loading. On Render these are set directly as
-> environment variables — no Secret File needed.
+> environment variables, no Secret File needed.
 
 ### Frontend `apps/web/.env`
 | Variable | Purpose |
@@ -435,7 +438,7 @@ backend via `FLOURISH_API_BASE_URL` (defaults to `http://localhost:8000`).
 | `VITE_WS_URL` | WebSocket base for the notification channel (default `ws://localhost:8000`) |
 
 ### Deployment
-Deliberately not being worked on right now — see the note in §1. `render.yaml` exists
+Deliberately not being worked on right now; see the note in §1. `render.yaml` exists
 from Phase 0 and is left as-is; no `vercel.json` yet. Revisit once the phases in
 `06-Phase-Tracker.md` are done.
 

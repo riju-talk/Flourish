@@ -1,3 +1,12 @@
+<p align="center">
+  <br>
+  <img src="docs/logo.png" alt="Flourish Logo" width="600">
+  <br>
+  <i>A look at your digital garden.</i>
+  <br>
+</p>
+
+
 <h1 align="center">Flourish</h1>
 <p align="center"><b>Transform your black thumb into a green one.</b></p>
 
@@ -25,7 +34,7 @@
 
 <p align="center">
   <br>
-  <img src="image.png" alt="Flourish garden view" width="600">
+  <img src="docs/dashboard.png" alt="Flourish garden view" width="600">
   <br>
   <i>A look at your digital garden.</i>
   <br>

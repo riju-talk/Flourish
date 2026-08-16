@@ -1,6 +1,6 @@
-# Flourish — Rules of Engagement
+# Flourish: Rules of Engagement
 
-> Working conventions agreed for every change to the Flourish repository — by humans and AI agents alike.
+> Working conventions agreed for every change to the Flourish repository, followed by humans and AI agents alike.
 > **Last updated:** 2026-08-05
 
 ---
@@ -22,10 +22,10 @@ Confirm a dependency exists in `package.json` / `requirements.txt` before using 
 Follow existing conventions rather than introducing parallel patterns.
 
 ## 3. Firestore is the single source of truth
-Do **not** use the SQLAlchemy models in `apps/api/api/models/db_models.py` — they are
+Do **not** use the SQLAlchemy models in `apps/api/api/models/db_models.py`. They are
 legacy and orphaned. All persistence goes through `apps/api/api/db/firestore.py`
 (`FirestoreDB`). Document your changes in `docs/03-Data-Schema.md`, using the field
-names the code actually uses — `docs/03-Data-Schema.md` is the literal contract, even
+names the code actually uses. `docs/03-Data-Schema.md` is the literal contract, even
 where `01-PRD.md`'s illustrative JSON uses different naming.
 
 ## 4. Auth is mandatory
@@ -39,7 +39,7 @@ commits. Use `.env.example` for documentation only. Review `git status`/`diff` b
 any commit.
 - A Firebase Admin service-account key currently lives untracked at the repo root for
   local development. It is covered by a glob in `.gitignore`
-  (`*firebase-adminsdk*.json`) — if the key is ever rotated/re-downloaded under a new
+  (`*firebase-adminsdk*.json`). If the key is ever rotated or re-downloaded under a new
   filename, verify the glob still matches before assuming it's ignored; don't rely on
   an exact-filename entry.
 
@@ -64,7 +64,7 @@ docs accurate when you change the system (see Docs map below).
 ## 11. Groq is the sole LLM backend
 Ollama has been retired. Do not reintroduce Ollama-specific code paths, config vars
 (`OLLAMA_BASE_URL`, `OLLAMA_MODEL`), or a "local model fallback" without an explicit,
-new decision from the user — there currently is none, by design. All chat, lookup,
+new decision from the user. There currently is none, by design. All chat, lookup,
 document-analysis, and recommendation code goes through `GroqService`.
 
 ## 12. The leaderboard is privacy-safe by default
@@ -73,21 +73,21 @@ Every user's `email`, `phone_number`, and `full_name` are **private by default**
 for everyone, and only includes a user's `email`/`phone_number` if that specific user
 has opted in via `profiles.privacy.show_email` / `show_phone` (see
 `03-Data-Schema.md`). **This supersedes an earlier, since-reversed decision to show
-every user's contact info to everyone** — don't resurrect the old behavior; if privacy
+every user's contact info to everyone.** Don't resurrect the old behavior; if privacy
 defaults need to change again, that's a product decision to raise with the user, not
 infer from old context.
 
 ## 13. Automated (scheduled) emails must be logged, not just event emails
-Any email Flourish sends — whether triggered by a user action or by the in-process
-scheduler (`SchedulerService`) — must write both a `mail` document (for the Trigger
+Any email Flourish sends, whether triggered by a user action or by the in-process
+scheduler (`SchedulerService`), must write both a `mail` document (for the Trigger
 Email extension to actually send) **and** an `email_logs` document recording that send
 for that user (see `03-Data-Schema.md`). Never call `EmailService` in a way that skips
 the `email_logs` write. Always check `profiles.notification_preferences` before
-sending — a scheduled job must skip users who've opted out of that category.
+sending. A scheduled job must skip users who've opted out of that category.
 
 ## 14. Deployment configs are deliberate, not incidental
 `vercel.json`, `render.yaml`, `firebase.json`/`.firebaserc`/`extensions/*.env`, and
-`.github/workflows/keep-alive.yml` now exist and are live infrastructure — don't modify
+`.github/workflows/keep-alive.yml` now exist and are live infrastructure. Don't modify
 them as a side effect of unrelated work. Changing rootDir, env var names, the health
 check path, or the extension config has real deploy consequences; treat those edits
 with the same care as a schema change, and update the README's Deployment section if

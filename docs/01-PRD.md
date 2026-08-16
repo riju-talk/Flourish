@@ -1,10 +1,6 @@
-Here’s the clean, resume-ready PRD.
+# Flourish: Product Requirements Document
 
----
-
-# Flourish — Product Requirements Document
-
-**Product:** Flourish — AI-Powered Plant Care Agent  
+**Product:** Flourish (AI-Powered Plant Care Agent)  
 **Version:** 2.0.0  
 **Status:** Living document  
 **Goal:** Build a polished, full-stack AI plant care platform that feels production-ready, privacy-aware, and strong enough to showcase on a resume.
@@ -15,7 +11,7 @@ Here’s the clean, resume-ready PRD.
 
 Flourish helps users keep plants alive by combining personalized care schedules, proactive health insights, AI recommendations, and gamified progress tracking.
 
-Unlike generic reminder apps, Flourish acts as an **AI garden agent** that:
+Unlike generic reminder apps, Flourish acts as an **AI garden agent**. It:
 
 - tracks each plant’s care needs and health history
 - generates adaptive watering, fertilizing, and health-check schedules
@@ -289,7 +285,7 @@ Each PlantMind response should include:
 1. direct answer
 2. relevant context
 3. recommended action
-4. 2–4 follow-up suggestions
+4. 2 to 4 follow-up suggestions
 5. sources if web search was used
 
 ### Safety rules
@@ -911,7 +907,7 @@ For the current build:
 
 ### Project title
 
-**Flourish — AI-Powered Plant Care Agent**
+**Flourish (AI-Powered Plant Care Agent)**
 
 ### Short resume description
 
