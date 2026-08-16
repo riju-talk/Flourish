@@ -18,9 +18,9 @@ db = firestore.client()
 
 def setup_firestore_collections():
     """Set up Firestore collections with sample data and structure"""
-    
-    print("🔥 Setting up Firestore database for Flourish...")
-    
+
+    print("Setting up Firestore database for Flourish...")
+
     # Collections to create
     collections = {
         "profiles": {
@@ -63,30 +63,30 @@ def setup_firestore_collections():
             ]
         }
     }
-    
-    print("\n📊 Database Collections:")
+
+    print("\nDatabase Collections:")
     for collection_name, info in collections.items():
-        print(f"\n✅ {collection_name}")
+        print(f"\n{collection_name}")
         print(f"   Description: {info['description']}")
         print(f"   Fields: {', '.join(info['fields'])}")
-    
-    print("\n✅ Firestore database structure ready!")
-    print("\n📝 Collections created (will be visible once data is added):")
+
+    print("\nFirestore database structure ready!")
+    print("\nCollections created (will be visible once data is added):")
     for collection_name in collections.keys():
         print(f"   - {collection_name}")
-    
+
     return collections
 
 def create_sample_data():
     """Create sample data for testing (optional)"""
-    
-    print("\n\n🌱 Would you like to create sample data for testing?")
+
+    print("\n\nWould you like to create sample data for testing?")
     print("This will create a test user with sample plants and tasks.")
     print("Note: In production, data will be created through the app.")
-    
+
     # You can uncomment this to create test data
     # test_user_id = "test_user_123"
-    # 
+    #
     # # Create test profile
     # db.collection("profiles").document(test_user_id).set({
     #     "email": "test@flourish.com",
@@ -101,58 +101,58 @@ def create_sample_data():
     #     "created_at": firestore.SERVER_TIMESTAMP,
     #     "updated_at": firestore.SERVER_TIMESTAMP
     # })
-    # print(f"✅ Created test user profile: {test_user_id}")
+    # print(f"Created test user profile: {test_user_id}")
 
 def print_security_rules():
     """Print the Firestore security rules that should be applied"""
-    
-    print("\n\n🔒 IMPORTANT: Set up Firestore Security Rules")
+
+    print("\n\nIMPORTANT: Set up Firestore Security Rules")
     print("=" * 70)
     print("\nGo to: https://console.firebase.google.com/project/flourish-de908/firestore/rules")
     print("\nReplace the rules with this:\n")
-    
+
     rules = """rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // Helper function to check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     // Helper function to check if user owns the resource
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-    
+
     // Profiles - users can read/write their own profile
     // All authenticated users can read profiles (for leaderboard)
     match /profiles/{userId} {
       allow read: if isAuthenticated();
       allow write: if isOwner(userId);
     }
-    
+
     // Plants - users can only access their own plants
     match /plants/{plantId} {
       allow read: if isAuthenticated() && resource.data.user_id == request.auth.uid;
       allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
       allow update, delete: if isAuthenticated() && resource.data.user_id == request.auth.uid;
     }
-    
+
     // Care Tasks - users can only access their own tasks
     match /care_tasks/{taskId} {
       allow read: if isAuthenticated() && resource.data.user_id == request.auth.uid;
       allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
       allow update, delete: if isAuthenticated() && resource.data.user_id == request.auth.uid;
     }
-    
+
     // Notifications - users can only access their own notifications
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && resource.data.user_id == request.auth.uid;
       allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
       allow update, delete: if isAuthenticated() && resource.data.user_id == request.auth.uid;
     }
-    
+
     // Health Checks - users can only access their own health checks
     match /health_checks/{checkId} {
       allow read: if isAuthenticated() && resource.data.user_id == request.auth.uid;
@@ -161,14 +161,14 @@ service cloud.firestore {
     }
   }
 }"""
-    
+
     print(rules)
     print("\n" + "=" * 70)
 
 def print_indexes():
     """Print recommended Firestore indexes"""
-    
-    print("\n\n📑 Recommended Firestore Indexes")
+
+    print("\n\nRecommended Firestore Indexes")
     print("=" * 70)
     print("\nThese will be automatically created as you use the app.")
     print("If you see 'index required' errors, Firebase will provide a link to create them.")
@@ -176,73 +176,73 @@ def print_indexes():
     print("\n1. Collection: profiles")
     print("   - total_score (Descending)")
     print("   - Used for: Leaderboard queries")
-    
+
     print("\n2. Collection: care_tasks")
     print("   - user_id (Ascending), due_date (Ascending)")
     print("   - Used for: User's tasks sorted by due date")
-    
+
     print("\n3. Collection: notifications")
     print("   - user_id (Ascending), created_at (Descending)")
     print("   - Used for: User's notifications sorted by date")
-    
+
     print("\n" + "=" * 70)
 
 def verify_connection():
     """Verify Firebase connection"""
-    
-    print("\n\n🔍 Verifying Firebase connection...")
-    
+
+    print("\n\nVerifying Firebase connection...")
+
     try:
         # Try to access Firestore
         collections = db.collections()
         collection_names = [col.id for col in collections]
-        
+
         if collection_names:
-            print(f"✅ Connected! Found {len(collection_names)} existing collections:")
+            print(f"Connected! Found {len(collection_names)} existing collections:")
             for name in collection_names:
                 print(f"   - {name}")
         else:
-            print("✅ Connected! Database is empty (collections will appear when data is added)")
-        
+            print("Connected! Database is empty (collections will appear when data is added)")
+
         return True
     except Exception as e:
-        print(f"❌ Connection failed: {str(e)}")
+        print(f"Connection failed: {str(e)}")
         return False
 
 def main():
     """Main setup function"""
-    
+
     print("\n" + "=" * 70)
-    print("🌱 FLOURISH DATABASE SETUP")
+    print("FLOURISH DATABASE SETUP")
     print("=" * 70)
-    
+
     # Verify connection
     if not verify_connection():
-        print("\n❌ Setup failed! Check your Firebase credentials.")
+        print("\nSetup failed! Check your Firebase credentials.")
         return
-    
+
     # Set up collections
     setup_firestore_collections()
-    
+
     # Print security rules
     print_security_rules()
-    
+
     # Print indexes info
     print_indexes()
-    
+
     # Final instructions
-    print("\n\n✨ NEXT STEPS:")
+    print("\n\nNEXT STEPS:")
     print("=" * 70)
-    print("\n1. ✅ Database structure is ready!")
-    print("2. 🔒 Copy the security rules above to Firebase Console")
-    print("3. 🔐 Enable Google Sign-In in Authentication")
+    print("\n1. Database structure is ready!")
+    print("2. Copy the security rules above to Firebase Console")
+    print("3. Enable Google Sign-In in Authentication")
     print("   https://console.firebase.google.com/project/flourish-de908/authentication/providers")
-    print("4. 🚀 Start your backend: python main.py")
-    print("5. 🌐 Start your frontend: npm run dev")
-    print("6. 🎉 Sign in and start using Flourish!")
-    
+    print("4. Start your backend: python main.py")
+    print("5. Start your frontend: npm run dev")
+    print("6. Sign in and start using Flourish!")
+
     print("\n" + "=" * 70)
-    print("✅ DATABASE SETUP COMPLETE!")
+    print("DATABASE SETUP COMPLETE!")
     print("=" * 70 + "\n")
 
 if __name__ == "__main__":

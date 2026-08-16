@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Seo } from '@/components/Seo';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
@@ -38,6 +39,7 @@ const Onboarding = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Seo title="Get Started" description="Tell us a bit about yourself to start your garden." />
       <Card className="glass-card w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-14 h-14 vibrant-gradient rounded-2xl flex items-center justify-center">

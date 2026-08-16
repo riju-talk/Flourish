@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Mic, MicOff, Image as ImageIcon, Send, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Image as ImageIcon, Send, Loader2, Sprout, Bot } from 'lucide-react';
 import { chatWithAI, analyzeImage } from '@/integrations/api';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -224,7 +224,7 @@ export default function Chat({ plantId }: ChatProps) {
       <div className="p-4 border-b bg-gradient-to-r from-flourish-green to-flourish-dark text-white rounded-t-lg">
         <div className="flex items-center space-x-3">
           <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-white/20 text-white">🌱</AvatarFallback>
+            <AvatarFallback className="bg-white/20 text-white"><Sprout className="h-5 w-5" /></AvatarFallback>
           </Avatar>
           <div>
             <h2 className="text-lg font-semibold">Plant Care Assistant</h2>
@@ -238,7 +238,7 @@ export default function Chat({ plantId }: ChatProps) {
         <div className="space-y-4">
           {messages.length === 0 && (
             <div className="text-center text-muted-foreground py-8">
-              <div className="text-4xl mb-2">🌱</div>
+              <Sprout className="h-10 w-10 mx-auto mb-2 opacity-70" />
               <p>Hi! I'm your plant care assistant. How can I help you today?</p>
             </div>
           )}
@@ -256,7 +256,7 @@ export default function Chat({ plantId }: ChatProps) {
                 <div className="flex items-start space-x-2">
                   {message.role === 'assistant' && (
                     <Avatar className="h-6 w-6 flex-shrink-0">
-                      <AvatarFallback className="bg-flourish-green text-white text-xs">🤖</AvatarFallback>
+                      <AvatarFallback className="bg-flourish-green text-white text-xs"><Bot className="h-3.5 w-3.5" /></AvatarFallback>
                     </Avatar>
                   )}
                   <div className="flex-1">
@@ -284,7 +284,7 @@ export default function Chat({ plantId }: ChatProps) {
               <Card className="max-w-[80%] p-3 bg-muted">
                 <div className="flex items-center space-x-2">
                   <Avatar className="h-6 w-6">
-                    <AvatarFallback className="bg-flourish-green text-white text-xs">🤖</AvatarFallback>
+                    <AvatarFallback className="bg-flourish-green text-white text-xs"><Bot className="h-3.5 w-3.5" /></AvatarFallback>
                   </Avatar>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="text-sm text-muted-foreground">Thinking...</span>

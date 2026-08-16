@@ -3,13 +3,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { Seo } from "@/components/Seo";
 import { PlantCard } from "@/components/PlantCard";
 import { DailyChecklist } from "@/components/DailyChecklist";
 import { LeaderboardPreview } from "@/components/LeaderboardPreview";
 import { AddPlantDialog } from "@/components/AddPlantDialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Leaf, Calendar as CalendarIcon, Trophy, Sparkles } from "lucide-react";
-import { getPlants, getTodayTasks, generateRecommendations } from "@/integrations/api";
+import { getPlants, getTodayProgress, generateRecommendations } from "@/integrations/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -31,10 +32,12 @@ const Index = () => {
     queryFn: getPlants,
   });
 
-  const { data: schedule, isLoading: scheduleLoading } = useQuery({
+  const { data: todayProgress, isLoading: scheduleLoading } = useQuery({
     queryKey: ["today-schedule"],
-    queryFn: getTodayTasks,
+    queryFn: getTodayProgress,
   });
+  const schedule = todayProgress?.tasks;
+  const completionPercent = todayProgress?.completion_percent ?? 0;
 
   const handlePlantAdded = () => {
     queryClient.invalidateQueries({ queryKey: ["plants"] });
@@ -48,6 +51,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col">
+      <Seo title="Dashboard" description="Your garden at a glance - today's care tasks, plant health, and quick actions." />
       <Navbar />
       <AddPlantDialog
         open={isAddPlantOpen}
@@ -102,11 +106,11 @@ const Index = () => {
                   </h2>
                   <p className="text-muted-foreground text-sm">Consistency is the root of growth.</p>
                 </div>
-                <div className="text-2xl font-bold text-primary">65%</div>
+                <div className="text-2xl font-bold text-primary">{completionPercent}%</div>
               </div>
 
               <div className="w-full h-2.5 bg-secondary rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: '65%' }}></div>
+                <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${completionPercent}%` }}></div>
               </div>
 
               <div className="pt-2">

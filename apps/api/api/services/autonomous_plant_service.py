@@ -221,7 +221,7 @@ class AutonomousPlantService:
             schedule.append(CareSchedule(
                 plant_id=plant.id or "temp",
                 schedule_type="watering",
-                title=f"💧 Water {plant.name}",
+                title=f"Water {plant.name}",
                 description=f"{plant.watering_amount}. Check soil moisture before watering.",
                 scheduled_date=scheduled_date,
                 priority="high" if i == 0 else "medium",
@@ -234,7 +234,7 @@ class AutonomousPlantService:
             schedule.append(CareSchedule(
                 plant_id=plant.id or "temp",
                 schedule_type="fertilizing",
-                title=f"🌱 Fertilize {plant.name}",
+                title=f"Fertilize {plant.name}",
                 description=f"Apply {plant.fertilizer_type} as directed.",
                 scheduled_date=scheduled_date,
                 priority="medium",
@@ -247,7 +247,7 @@ class AutonomousPlantService:
             schedule.append(CareSchedule(
                 plant_id=plant.id or "temp",
                 schedule_type="health_check",
-                title=f"👀 Health Check: {plant.name}",
+                title=f"Health Check: {plant.name}",
                 description="Check leaves, soil, and overall plant health. Look for pests or issues.",
                 scheduled_date=scheduled_date,
                 priority="medium",
@@ -260,7 +260,7 @@ class AutonomousPlantService:
             schedule.append(CareSchedule(
                 plant_id=plant.id or "temp",
                 schedule_type="health_check",
-                title=f"👀 Weekly Health Check: {plant.name}",
+                title=f"Weekly Health Check: {plant.name}",
                 description="Weekly inspection for pests, diseases, and general health.",
                 scheduled_date=scheduled_date,
                 priority="low",

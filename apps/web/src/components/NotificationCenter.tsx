@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, Check, Trash2, CheckCheck } from 'lucide-react';
+import { Bell, Check, Trash2, CheckCheck, Trophy, Clock, AlertTriangle, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -50,6 +50,12 @@ export default function NotificationCenter() {
   // client only finding out on its next poll.
   useEffect(() => {
     if (!user) return;
+    // No VITE_WS_URL means either local dev (falls back to localhost) or a backend
+    // host that doesn't support WebSockets at all (e.g. Vercel serverless functions -
+    // see docs/DEPLOYMENT.md). Attempting a connection there would just fail and
+    // retry forever every 5s; the 30s poll above is the only channel in that case.
+    const wsBase = (import.meta.env.VITE_WS_URL as string) || (import.meta.env.DEV ? 'ws://localhost:8000' : '');
+    if (!wsBase) return;
     let cancelled = false;
 
     const connect = async () => {
@@ -57,7 +63,6 @@ export default function NotificationCenter() {
       const token = await auth.currentUser?.getIdToken().catch(() => null);
       if (!token || cancelled) return;
 
-      const wsBase = (import.meta.env.VITE_WS_URL as string) || 'ws://localhost:8000';
       const ws = new WebSocket(`${wsBase}/api/notifications/ws?token=${encodeURIComponent(token)}`);
       wsRef.current = ws;
 
@@ -145,13 +150,13 @@ export default function NotificationCenter() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'achievement':
-        return '🏆';
+        return <Trophy className="h-5 w-5 text-amber-500" />;
       case 'reminder':
-        return '⏰';
+        return <Clock className="h-5 w-5 text-blue-500" />;
       case 'alert':
-        return '⚠️';
+        return <AlertTriangle className="h-5 w-5 text-red-500" />;
       default:
-        return '📢';
+        return <Megaphone className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
@@ -208,7 +213,7 @@ export default function NotificationCenter() {
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <span className="text-2xl">{getNotificationIcon(notification.type)}</span>
+                    <span className="mt-0.5 shrink-0">{getNotificationIcon(notification.type)}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">

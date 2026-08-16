@@ -38,7 +38,21 @@ class FirestoreDB:
     def generate_id() -> str:
         """Generate a unique ID"""
         return str(uuid.uuid4())
-    
+
+    @staticmethod
+    def _read_back(collection: str, doc_id: str) -> Dict:
+        """
+        Re-fetch a just-written document instead of returning the dict that was passed
+        to .set(). Any field written as firestore.SERVER_TIMESTAMP stays an unresolved
+        Sentinel object in that local dict - Firestore only resolves it server-side -
+        so returning it directly hands FastAPI (or a WebSocket send_json) something it
+        can't serialize. Every create_* method below reads back through this instead.
+        """
+        doc = get_db().collection(collection).document(doc_id).get()
+        data = doc.to_dict() or {}
+        data['id'] = doc_id
+        return data
+
     # ============ PROFILES ============
     
     @staticmethod
@@ -100,15 +114,8 @@ class FirestoreDB:
                 "created_at": firestore.SERVER_TIMESTAMP,
                 "updated_at": firestore.SERVER_TIMESTAMP
             }
-            doc_ref = get_db().collection(PROFILES_COLLECTION).document(user_id)
-            doc_ref.set(profile_data)
-            # profile_data still holds the raw firestore.SERVER_TIMESTAMP sentinels for
-            # created_at/updated_at - Firestore only resolves those server-side, so
-            # returning profile_data directly would hand FastAPI an unserializable
-            # Sentinel object. Re-read the doc to get the actual resolved timestamps.
-            created = doc_ref.get().to_dict()
-            created['id'] = user_id
-            return created
+            get_db().collection(PROFILES_COLLECTION).document(user_id).set(profile_data)
+            return FirestoreDB._read_back(PROFILES_COLLECTION, user_id)
         except Exception as e:
             print(f"Error creating profile for {user_id}: {e}")
             raise
@@ -143,7 +150,7 @@ class FirestoreDB:
             "updated_at": firestore.SERVER_TIMESTAMP
         })
         get_db().collection(PLANTS_COLLECTION).document(plant_id).set(plant_data)
-        return plant_data
+        return FirestoreDB._read_back(PLANTS_COLLECTION, plant_id)
     
     @staticmethod
     async def get_plant(plant_id: str, user_id: str) -> Optional[Dict]:
@@ -190,7 +197,7 @@ class FirestoreDB:
             "created_at": firestore.SERVER_TIMESTAMP
         })
         get_db().collection(TASKS_COLLECTION).document(task_id).set(task_data)
-        return task_data
+        return FirestoreDB._read_back(TASKS_COLLECTION, task_id)
     
     @staticmethod
     async def get_task(task_id: str) -> Optional[Dict]:
@@ -204,15 +211,19 @@ class FirestoreDB:
     
     @staticmethod
     async def get_user_tasks(user_id: str, completed: Optional[bool] = None) -> List[Dict]:
-        """Get all tasks for a user"""
+        """Get all tasks for a user, optionally filtered by completion status"""
         query = get_db().collection(TASKS_COLLECTION).where('user_id', '==', user_id)
+        # Push the completed filter down to Firestore instead of streaming every task
+        # and filtering in Python - a pure-equality compound filter like this doesn't
+        # need a composite index.
+        if completed is not None:
+            query = query.where('completed', '==', completed)
         docs = query.stream()
         tasks = []
         for doc in docs:
             data = doc.to_dict()
             data['id'] = doc.id
-            if completed is None or data.get('completed') == completed:
-                tasks.append(data)
+            tasks.append(data)
         return tasks
     
     @staticmethod
@@ -248,7 +259,7 @@ class FirestoreDB:
             "created_at": firestore.SERVER_TIMESTAMP
         })
         get_db().collection(NOTIFICATIONS_COLLECTION).document(notif_id).set(notification_data)
-        return notification_data
+        return FirestoreDB._read_back(NOTIFICATIONS_COLLECTION, notif_id)
     
     @staticmethod
     async def get_user_notifications(user_id: str, unread_only: bool = False, limit: int = 50) -> List[Dict]:
@@ -293,7 +304,7 @@ class FirestoreDB:
             "checked_at": firestore.SERVER_TIMESTAMP
         })
         get_db().collection(HEALTH_CHECKS_COLLECTION).document(check_id).set(health_data)
-        return health_data
+        return FirestoreDB._read_back(HEALTH_CHECKS_COLLECTION, check_id)
     
     @staticmethod
     async def get_plant_health_checks(plant_id: str) -> List[Dict]:
@@ -319,7 +330,7 @@ class FirestoreDB:
             "created_at": firestore.SERVER_TIMESTAMP
         })
         get_db().collection(RECOMMENDATIONS_COLLECTION).document(rec_id).set(rec_data)
-        return rec_data
+        return FirestoreDB._read_back(RECOMMENDATIONS_COLLECTION, rec_id)
 
     @staticmethod
     async def get_recommendation(rec_id: str) -> Optional[Dict]:
@@ -377,7 +388,7 @@ class FirestoreDB:
             "sent_at": firestore.SERVER_TIMESTAMP
         }
         get_db().collection(EMAIL_LOGS_COLLECTION).document(log_id).set(log_data)
-        return log_data
+        return FirestoreDB._read_back(EMAIL_LOGS_COLLECTION, log_id)
 
     @staticmethod
     async def get_user_email_logs(user_id: str, limit: int = 50) -> List[Dict]:

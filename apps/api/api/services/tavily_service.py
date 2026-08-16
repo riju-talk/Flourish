@@ -1,3 +1,4 @@
+from typing import Any, Dict, List
 from ..core.config import settings
 
 class TavilyService:
@@ -17,3 +18,24 @@ class TavilyService:
         except Exception as e:
             print(f"Tavily search error: {e}")
             return f"Web search failed: {e}"
+
+    @staticmethod
+    async def search_raw(query: str, max_results: int = 5) -> List[Dict[str, Any]]:
+        """
+        Structured (non-summarized) search results - [{title, url, content}, ...] - for
+        callers that curate the results themselves with rule-based logic instead of
+        handing them to an LLM (see plant_lookup_service.py's Explore lookup).
+        """
+        if not settings.TAVILY_API_KEY:
+            return []
+        try:
+            from langchain_tavily import TavilySearch
+
+            search_tool = TavilySearch(max_results=max_results, tavily_api_key=settings.TAVILY_API_KEY)
+            result = await search_tool.ainvoke({"query": query})
+            if isinstance(result, dict):
+                return result.get("results") or []
+            return []
+        except Exception as e:
+            print(f"Tavily raw search error: {e}")
+            return []

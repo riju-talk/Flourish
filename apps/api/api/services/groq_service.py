@@ -1,3 +1,4 @@
+import asyncio
 import json
 from datetime import datetime
 from typing import List, Dict, Any, Optional
@@ -13,6 +14,7 @@ from ..db.firestore import FirestoreDB
 from .weather_service import WeatherService
 from .tavily_service import TavilyService
 from .plant_service import PlantService
+from .perenual_service import PerenualService
 
 PLANT_MIND_SYSTEM_PROMPT = """You are PlantMind, Flourish's autonomous garden agent. You are proactive,
 knowledgeable, and caring about plant health.
@@ -22,9 +24,11 @@ improve your answer, call at most 2 tools, then synthesize a direct, actionable 
 the user's actual garden and current data when relevant.
 
 Available tools let you look up the user's own plants and task history, current weather for a
-location, and live web search for facts that go stale (pest activity, product availability, current
-events). Only call a tool when it would materially improve the answer - don't call tools for
-questions you can already answer well.
+location, live web search for facts that go stale (pest activity, product availability, current
+events), and a real plant-care database (Perenual) for authoritative watering/sunlight facts about
+a specific species - prefer that over guessing when a question is about a named plant's care needs.
+Only call a tool when it would materially improve the answer - don't call tools for questions you
+can already answer well.
 
 Never invent completed tasks, never claim certainty you don't have, and always include safety
 warnings for toxic plants or chemical treatments. Respond in a warm, encouraging tone."""
@@ -64,7 +68,19 @@ def _build_tools(user_id: str):
         """Search the web for current, sourced information relevant to plant care."""
         return await TavilyService.search(query)
 
-    return [get_user_garden, get_task_history, get_weather, web_search]
+    @tool
+    async def get_plant_care_facts(plant_name: str) -> str:
+        """
+        Get authoritative watering frequency and sunlight requirement for a named plant
+        species from the Perenual plant-care database. Use this instead of guessing
+        when a question is specifically about how to care for a named plant.
+        """
+        info = await PerenualService.get_care_info(plant_name)
+        if not info:
+            return f"No Perenual data found for '{plant_name}'."
+        return json.dumps(info, default=str)
+
+    return [get_user_garden, get_task_history, get_weather, web_search, get_plant_care_facts]
 
 class GroqService:
     """
@@ -83,6 +99,24 @@ class GroqService:
         }
         if json_mode:
             kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
+            # get_plant_info_agentic's schema (10+ nested objects/arrays) routinely got
+            # cut off mid-document at the default token limit, which Groq's JSON
+            # validator then rejects outright ("max completion tokens reached before
+            # generating a valid document") - the caller's fallback silently ate every
+            # field this was supposed to fill in.
+            kwargs["max_tokens"] = 2048
+            # The configured model is a reasoning model (emits a <think>...</think>
+            # block before its actual answer). For anything beyond a trivial prompt,
+            # that reasoning alone regularly exceeds the whole max_tokens budget,
+            # leaving zero tokens for the actual JSON - which Groq's json_object
+            # validator then rejects outright ("Failed to validate JSON" with an
+            # empty failed_generation, since nothing but reasoning was ever
+            # generated). reasoning_effort="none" skips the thinking phase entirely
+            # for these structured-extraction calls, which don't need multi-step
+            # deliberation anyway; reasoning_format="hidden" is kept as a second
+            # layer so a stray reasoning block never leaks into the JSON output.
+            kwargs["reasoning_format"] = "hidden"
+            kwargs["reasoning_effort"] = "none"
         return ChatGroq(**kwargs)
 
     @staticmethod
@@ -117,6 +151,9 @@ class GroqService:
                 raise ValueError("messages must contain at least the user's latest turn")
 
             system_prompt = PLANT_MIND_SYSTEM_PROMPT
+            memory = await GroqService._agent_memory_context(user_id)
+            if memory:
+                system_prompt += f"\n\nWhat you remember about this user: {memory}"
             if context:
                 system_prompt += f"\n\nAdditional context: {context}"
 
@@ -197,6 +234,75 @@ class GroqService:
             }
 
     @staticmethod
+    async def curate_plant_lookup(
+        plant_name: str,
+        perenual: Optional[Dict[str, Any]],
+        tavily_results: List[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Explore/Plant Lookup synthesis: Perenual (structured, deterministic) and Tavily
+        (live web search results) are the only sources of fact - this call's only job
+        is to read both and write up one coherent, well-organized profile in the shape
+        the Explore UI renders. It must not invent facts beyond what's given, and must
+        say so explicitly (rather than guessing) wherever neither source covers a
+        field. Returns None on any failure so the caller can fall back to
+        plant_lookup_service.curate_plant_info's deterministic keyword extraction -
+        this is an upgrade over that fallback's quality, not a replacement for its
+        reliability.
+        """
+        perenual_json = json.dumps(perenual) if perenual else "null (no match found - be extra careful not to assume facts about this specific plant)"
+        # Trim each result's content - only enough for the model to ground itself, not
+        # so much that a handful of results blow the completion budget before the
+        # model finishes writing valid JSON (see the max_tokens comment in _client).
+        search_snippets = "\n\n".join(
+            f"[{i+1}] {r.get('title','')}\n{(r.get('content') or '')[:600]}\nURL: {r.get('url','')}"
+            for i, r in enumerate(tavily_results[:5])
+        ) or "No web search results available."
+
+        prompt = f"""
+        A user searched for the plant: "{plant_name}"
+
+        Structured data from Perenual (a plant-care database) for the best species match found:
+        {perenual_json}
+
+        Live web search results:
+        {search_snippets}
+
+        Using ONLY the information above, write a curated care profile for this plant. If the
+        Perenual data above appears to describe a DIFFERENT plant than what the search results and
+        the user's query are actually about, ignore the Perenual data entirely and rely on the
+        search results instead - do not present facts about the wrong species. If a field isn't
+        covered by either source, say "See sources below" (for care fields) or leave the array
+        empty rather than inventing a plausible-sounding answer.
+
+        Respond with JSON only, matching this exact shape:
+        {{
+            "common_name": "string",
+            "scientific_name": "string",
+            "care_level": "easy|moderate|difficult",
+            "watering": {{"frequency": "string, e.g. 'Every 7 days'", "amount": "string", "tips": "string"}},
+            "sunlight": {{"requirement": "string, e.g. 'Bright, indirect'", "details": "string"}},
+            "fertilizing": {{"frequency": "string", "type": "string"}},
+            "toxicity": {{"pets": "toxic|safe|unknown", "humans": "toxic|safe|unknown", "details": "string"}},
+            "environment": {{"native_habitat": "string", "grows_indoors": true}},
+            "common_issues": ["up to 4 short strings"],
+            "propagation": ["up to 4 short strings, e.g. 'stem cutting'"],
+            "interesting_facts": ["up to 3 short strings"]
+        }}
+        """
+        try:
+            client = GroqService._client(json_mode=True)
+            response = await client.ainvoke([HumanMessage(content=prompt)])
+            curated = json.loads(response.content)
+            # Sources are the caller's own Tavily URLs, not anything the model wrote -
+            # never trust an LLM to reproduce a URL correctly.
+            curated["sources"] = [r.get("url") for r in tavily_results if r.get("url")][:5]
+            return curated
+        except Exception as e:
+            print(f"Groq Plant Lookup Curation Error: {e}")
+            return None
+
+    @staticmethod
     async def get_plant_info_agentic(plant_name: str) -> Dict[str, Any]:
         """Agentic plant information retrieval - user types plant name, we return structured care info"""
         prompt = f"""
@@ -275,16 +381,17 @@ class GroqService:
             content = result["output"]
             parsed = GroqService._extract_json_array(content)
 
-            recommendations = []
-            for item in parsed[:count]:
-                image_url = None
-                try:
-                    image_url = await PlantService.fetch_plant_image(
-                        item.get("plant_name", ""), item.get("scientific_name", "")
-                    )
-                except Exception:
-                    pass
+            items = parsed[:count]
+            # One Unsplash search per item is independent of the others - run them
+            # concurrently instead of one-by-one so N picks don't cost N sequential
+            # round-trips.
+            image_urls = await asyncio.gather(*[
+                PlantService.fetch_plant_image(item.get("plant_name", ""), item.get("scientific_name", ""))
+                for item in items
+            ])
 
+            recommendations = []
+            for item, image_url in zip(items, image_urls):
                 rec = await FirestoreDB.create_recommendation({
                     "user_id": user_id,
                     "plant_name": item.get("plant_name", "Unknown"),
@@ -298,10 +405,31 @@ class GroqService:
                 })
                 recommendations.append(rec)
 
+            await GroqService._enforce_recommendation_cap(user_id)
+
             return recommendations
         except Exception as e:
             print(f"Groq Recommendation Error: {e}")
             return []
+
+    MAX_PENDING_RECOMMENDATIONS = 10
+
+    @staticmethod
+    async def _enforce_recommendation_cap(user_id: str) -> None:
+        """
+        Keep at most MAX_PENDING_RECOMMENDATIONS pending. Once full, the oldest pending
+        ones rotate out as "expired" (not added to avoided_plants) so the pool stays
+        fresh as the garden expands, and rotated-out plants can resurface again later -
+        only an explicit dismiss should permanently avoid a plant.
+        """
+        pending = await FirestoreDB.get_user_recommendations(user_id, status="pending")
+        overflow = len(pending) - GroqService.MAX_PENDING_RECOMMENDATIONS
+        if overflow <= 0:
+            return
+
+        pending.sort(key=lambda r: str(r.get("created_at") or ""))
+        for rec in pending[:overflow]:
+            await FirestoreDB.update_recommendation(rec["id"], {"status": "expired"})
 
     @staticmethod
     def _extract_json_array(content: str) -> List[Dict[str, Any]]:
@@ -318,11 +446,38 @@ class GroqService:
             return []
 
     @staticmethod
+    async def _agent_memory_context(user_id: str) -> str:
+        """
+        PlantMind's persistent per-user memory: profiles.agent_profile (see
+        update_agent_profile_summary) is a durable, deterministic summary of this
+        user's garden and care habits that survives across sessions and devices -
+        unlike chat_history, which only covers the current conversation. Every agent
+        call (chat here, and generate_recommendations) reads it back in so PlantMind
+        "remembers" the user without re-deriving everything from raw Firestore data
+        or, worse, forgetting entirely between conversations.
+        """
+        profile = await FirestoreDB.get_profile(user_id)
+        if not profile:
+            return ""
+        agent_profile = profile.get("agent_profile") or {}
+        parts = []
+        if agent_profile.get("summary"):
+            parts.append(agent_profile["summary"])
+        prefs = agent_profile.get("recommendation_preferences") or {}
+        if prefs.get("avoided_plants"):
+            parts.append(f"Has previously dismissed: {', '.join(prefs['avoided_plants'])}.")
+        if prefs.get("preferred_traits"):
+            parts.append(f"Seems to prefer: {', '.join(prefs['preferred_traits'])}.")
+        return " ".join(parts)
+
+    @staticmethod
     async def update_agent_profile_summary(user_id: str) -> None:
         """
-        Refresh profiles.agent_profile from the user's current garden + task history.
-        Deterministic (no extra LLM call) so it's cheap to run after every meaningful
-        interaction - see docs/06-Phase-Tracker.md Phase 2 known gap.
+        Refresh profiles.agent_profile from the user's current garden + task history -
+        the persistent memory store _agent_memory_context reads back on every future
+        agent call. Deterministic (no extra LLM call) so it's cheap to run after every
+        meaningful interaction (chat turns, a plant being added, a task completed) -
+        see docs/06-Phase-Tracker.md Phase 2 known gap.
         """
         try:
             profile = await FirestoreDB.get_profile(user_id)

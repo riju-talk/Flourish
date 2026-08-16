@@ -1,8 +1,12 @@
+import asyncio
+import re
 import httpx
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
 from ..core.config import settings
 from ..db.firestore import FirestoreDB
+from ..models.plant import Plant
+from .perenual_service import PerenualService
 
 class PlantService:
     @staticmethod
@@ -104,4 +108,94 @@ class PlantService:
                     "recurring_days": fertilizer_days
                 })
 
-        return [await FirestoreDB.create_task(t) for t in to_create]
+        # Independent writes - create them concurrently rather than one-at-a-time.
+        return list(await asyncio.gather(*[FirestoreDB.create_task(t) for t in to_create]))
+
+    @staticmethod
+    def _parse_frequency_days(frequency: Optional[str]) -> Optional[int]:
+        """Best-effort extraction of a day count from Groq's free-text frequency string."""
+        if not frequency:
+            return None
+        match = re.search(r'(\d+)', frequency)
+        if not match:
+            return None
+        days = int(match.group(1))
+        lowered = frequency.lower()
+        if "week" in lowered:
+            days *= 7
+        elif "month" in lowered:
+            days *= 30
+        return days if days > 0 else None
+
+    @staticmethod
+    async def resolve_care_info(plant_name: str, groq_plant_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Deterministic-first care resolution for "add to garden" and QA: Perenual (a real
+        horticultural database) takes priority over Groq's free-text guess, which is
+        only a fallback for whatever Perenual doesn't cover (no API key, no match, or a
+        field Perenual doesn't report). groq_plant_info, if provided, is the dict
+        already produced by GroqService.get_plant_info_agentic - passed in rather than
+        re-fetched, so callers that already ran the agentic lookup don't pay for it twice.
+        """
+        perenual = await PerenualService.get_care_info(plant_name)
+
+        watering_days = perenual.get("watering_frequency_days") if perenual else None
+        sunlight = perenual.get("sunlight") if perenual else None
+        scientific_name = perenual.get("scientific_name") if perenual else None
+        native_habitat = perenual.get("native_habitat") if perenual else None
+
+        if groq_plant_info:
+            if watering_days is None:
+                watering_days = PlantService._parse_frequency_days(
+                    (groq_plant_info.get("watering") or {}).get("frequency")
+                )
+            if sunlight is None:
+                sunlight = (groq_plant_info.get("sunlight") or {}).get("requirement")
+            if not scientific_name:
+                scientific_name = groq_plant_info.get("scientific_name")
+
+        return {
+            "watering_frequency_days": watering_days or 7,
+            "sunlight_requirement": sunlight or "Bright, indirect",
+            "scientific_name": scientific_name or "",
+            "native_habitat": native_habitat,
+            "source": "perenual" if perenual and perenual.get("watering_frequency_days") else "groq",
+        }
+
+    @staticmethod
+    async def build_new_plant_document(
+        user_id: str,
+        plant_name: str,
+        location: Optional[str] = None,
+        groq_plant_info: Optional[Dict[str, Any]] = None,
+        care_instructions: Any = "",
+    ) -> Dict[str, Any]:
+        """
+        Assemble a complete plant document for FirestoreDB.create_plant - watering/
+        sunlight resolved deterministically (see resolve_care_info), a real Unsplash
+        photo, and every other field defaulted via the Plant model so nothing renders
+        blank on the dashboard (health_score, plant_type, etc.) regardless of which
+        creation path (autonomous add, recommendation accept) built it.
+        """
+        # The image search doesn't actually need Perenual's answer - it only needs a
+        # plant/species name, and Groq's guess (if any) is already good enough for
+        # that. Running both concurrently instead of sequentially shaves a full
+        # network round-trip off "add to garden" latency.
+        best_guess_species = (groq_plant_info or {}).get("scientific_name") or ""
+        care, image_url = await asyncio.gather(
+            PlantService.resolve_care_info(plant_name, groq_plant_info),
+            PlantService.fetch_plant_image(plant_name, best_guess_species),
+        )
+
+        plant = Plant(
+            name=plant_name,
+            species=care["scientific_name"] or plant_name,
+            scientific_name=care["scientific_name"] or None,
+            location=location or "Indoor",
+            sunlight_requirement=care["sunlight_requirement"],
+            watering_frequency_days=care["watering_frequency_days"],
+            native_habitat=care.get("native_habitat"),
+            image_url=image_url,
+            care_instructions=str(care_instructions) if care_instructions else "",
+        )
+        return plant.dict()

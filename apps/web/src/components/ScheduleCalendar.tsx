@@ -149,7 +149,7 @@ export default function ScheduleCalendar() {
             <div className="text-center py-8 text-muted-foreground">
               <CheckCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>No tasks scheduled for today!</p>
-              <p className="text-sm">Great job keeping up with your plant care! 🌱</p>
+              <p className="text-sm">Great job keeping up with your plant care!</p>
             </div>
           )}
         </CardContent>

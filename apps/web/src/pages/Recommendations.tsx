@@ -1,5 +1,7 @@
+import { useEffect, useRef } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { Seo } from "@/components/Seo";
 import { RecommendationCard } from "@/components/RecommendationCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +18,7 @@ import { Sparkles } from "lucide-react";
 export default function RecommendationsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const hasAutoFetched = useRef(false);
 
   const { data: recommendations, isLoading } = useQuery({
     queryKey: ["recommendations"],
@@ -23,22 +26,51 @@ export default function RecommendationsPage() {
   });
 
   const generateMutation = useMutation({
-    mutationFn: () => generateRecommendations(3),
-    onSuccess: () => {
+    mutationFn: (opts?: { silent?: boolean }) => generateRecommendations(3),
+    onSuccess: (data, variables) => {
+      // Merge the freshly-generated picks straight into the cache instead of only
+      // invalidating - invalidateQueries only refetches *active* queries in the
+      // background, and if that refetch resolves after this component has already
+      // painted (or the query briefly isn't "active" during the silent auto-fetch
+      // on mount) the new picks never render until something else forces a refetch,
+      // like a manual page reload. Writing the result directly guarantees the grid
+      // updates the instant generation succeeds.
+      const fresh = data?.recommendations ?? [];
+      if (fresh.length > 0) {
+        queryClient.setQueryData(["recommendations"], (old: any[] = []) => [
+          ...fresh,
+          ...(old || []).filter((r) => !fresh.some((f: any) => f.id === r.id)),
+        ]);
+      }
       queryClient.invalidateQueries({ queryKey: ["recommendations"] });
-      toast({ title: "Fresh picks ready! 🌿" });
+      if (!variables?.silent) {
+        toast({ title: "Fresh picks ready!" });
+      }
     },
-    onError: () => {
-      toast({ title: "Couldn't generate recommendations", variant: "destructive" });
+    onError: (_err, variables) => {
+      if (!variables?.silent) {
+        toast({ title: "Couldn't generate recommendations", variant: "destructive" });
+      }
     },
   });
+
+  // PlantMind keeps suggestions current on its own - refresh the pool the moment the
+  // user lands on this page, instead of waiting for a manual click. The backend caps
+  // and rotates the pending pool (see /recommendations/generate), so this is safe to
+  // call on every visit without growing unbounded.
+  useEffect(() => {
+    if (hasAutoFetched.current) return;
+    hasAutoFetched.current = true;
+    generateMutation.mutate({ silent: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const acceptMutation = useMutation({
     mutationFn: (id: string) => acceptRecommendation(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recommendations"] });
       queryClient.invalidateQueries({ queryKey: ["plants"] });
-      toast({ title: "Added to your garden! 🌱" });
+      toast({ title: "Added to your garden!" });
     },
   });
 
@@ -53,6 +85,7 @@ export default function RecommendationsPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <Seo title="Recommendations" description="Personalized plant suggestions based on what you already grow." />
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-10 space-y-8">
         <div className="flex items-center justify-between flex-wrap gap-4">

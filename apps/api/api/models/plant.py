@@ -35,6 +35,7 @@ class Plant(BaseModel):
     preferred_locations: List[str] = []
     sunlight_requirement: str = "Medium indirect light"
     temperature_range: Dict[str, int] = {"min": 18, "max": 24}  # Celsius
+    native_habitat: Optional[str] = None
 
     # Care requirements
     watering_frequency_days: int = 7

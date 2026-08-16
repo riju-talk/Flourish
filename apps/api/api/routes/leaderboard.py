@@ -49,21 +49,21 @@ async def update_user_score(user_id: str, points: int):
         # Achievement: First task
         if tasks_completed == 1 and "first_task" not in achievements:
             achievements.append("first_task")
-            title, message = "Achievement Unlocked!", "🌱 First Steps - Completed your first task!"
+            title, message = "Achievement Unlocked!", "First Steps - Completed your first task!"
             await NotificationService.notify(user_id, "achievement", title, message)
             await EmailService.send_for_notification(user_id, "achievement", title, message)
 
         # Achievement: Level up
         if new_level > profile.get("level", 1):
             achievements.append(f"level_{new_level}")
-            title, message = "Level Up!", f"🎉 You've reached Level {new_level}!"
+            title, message = "Level Up!", f"You've reached Level {new_level}!"
             await NotificationService.notify(user_id, "achievement", title, message)
             await EmailService.send_for_notification(user_id, "achievement", title, message)
 
         # Achievement: 7 day streak
         if streak_days >= 7 and "streak_7" not in achievements:
             achievements.append("streak_7")
-            title, message = "Achievement Unlocked!", "🔥 Week Warrior - Maintained a 7 day streak!"
+            title, message = "Achievement Unlocked!", "Week Warrior - Maintained a 7 day streak!"
             await NotificationService.notify(user_id, "achievement", title, message)
             await EmailService.send_for_notification(user_id, "achievement", title, message)
         

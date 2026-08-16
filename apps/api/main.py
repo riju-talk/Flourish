@@ -1,11 +1,18 @@
+import os
 from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from api.routes import plants, dashboard, chat, tasks, images, mcp, notifications, leaderboard, storage, auth, recommendations
+from api.routes import plants, dashboard, chat, tasks, images, mcp, notifications, leaderboard, storage, auth, recommendations, cron
 from api.core.config import settings
 from api.core.auth import verify_firebase_token
 from api.services.scheduler_service import start_scheduler, stop_scheduler
+
+# Vercel sets this in every function invocation. On a serverless host the process is
+# frozen/killed between requests, so an in-process APScheduler (start_scheduler below)
+# can't fire reliably - those three jobs run instead via /api/cron/*, called by an
+# external scheduler. See scheduler_service.start_scheduler's docstring.
+IS_SERVERLESS = bool(os.getenv("VERCEL"))
 
 # Initialize FastAPI
 app = FastAPI(
@@ -50,11 +57,15 @@ async def startup_event():
     print("Starting Flourish API...")
     print("Firebase Firestore ready!")
     print("No database setup needed - using Firebase!")
-    start_scheduler()
+    if IS_SERVERLESS:
+        print("Running on Vercel - skipping in-process scheduler, using /api/cron/* instead")
+    else:
+        start_scheduler()
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    stop_scheduler()
+    if not IS_SERVERLESS:
+        stop_scheduler()
 
 # Include routers with authentication dependency
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])  # No auth required for profile creation
@@ -68,11 +79,12 @@ app.include_router(notifications.router, prefix="/api/notifications", tags=["not
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["leaderboard"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(storage.router, prefix="/api/storage", tags=["storage"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(recommendations.router, prefix="/api/recommendations", tags=["recommendations"], dependencies=[Depends(verify_firebase_token)])
+app.include_router(cron.router, prefix="/api/cron", tags=["cron"])  # self-enforces CRON_SECRET, not a Firebase user token - see routes/cron.py
 
 @app.get("/")
 async def root():
     return {
-        "message": "🌱 Flourish - Your Plant Care Companion",
+        "message": "Flourish - Your Plant Care Companion",
         "version": "1.0.0",
         "features": [
             "Plant Inventory Management",

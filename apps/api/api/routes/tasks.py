@@ -6,22 +6,24 @@ from ..core.auth import verify_firebase_token
 from ..db.firestore import FirestoreDB
 from ..services.plant_service import PlantService
 from ..services.notification_service import NotificationService
+from ..services.groq_service import GroqService
 from ..routes.leaderboard import update_user_score
 
 router = APIRouter()
 
 @router.get("/today")
 async def get_today_tasks(user_id: str = Depends(verify_firebase_token)):
-    """Get today's tasks"""
+    """Get today's tasks, plus completion counts for the dashboard's Daily Rituals progress bar"""
     try:
         today = date.today()
-        
-        # Get all incomplete tasks for the user
-        tasks = await FirestoreDB.get_user_tasks(user_id, completed=False)
-        
-        # Filter tasks for today
+
+        # All of the user's tasks, complete and incomplete - needed for the completion
+        # percentage below, not just the pending list the checklist renders.
+        all_tasks = await FirestoreDB.get_user_tasks(user_id)
+
         today_tasks = []
-        for task in tasks:
+        completed_today = 0
+        for task in all_tasks:
             due_date = task.get("due_date")
             if due_date:
                 # Handle both datetime objects and ISO strings
@@ -29,15 +31,27 @@ async def get_today_tasks(user_id: str = Depends(verify_firebase_token)):
                     task_date = datetime.fromisoformat(due_date.replace('Z', '+00:00')).date()
                 else:
                     task_date = due_date.date() if hasattr(due_date, 'date') else due_date
-                
+
                 if task_date == today:
-                    today_tasks.append(task)
-        
+                    if task.get("completed"):
+                        completed_today += 1
+                    else:
+                        today_tasks.append(task)
+
         # Sort by priority
         priority_order = {"high": 0, "medium": 1, "low": 2}
         today_tasks.sort(key=lambda x: priority_order.get(x.get("priority", "medium"), 3))
-        
-        return {"tasks": today_tasks, "date": today.isoformat()}
+
+        total_today = len(today_tasks) + completed_today
+        completion_percent = round((completed_today / total_today) * 100) if total_today else 0
+
+        return {
+            "tasks": today_tasks,
+            "date": today.isoformat(),
+            "completed_count": completed_today,
+            "total_count": total_today,
+            "completion_percent": completion_percent,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -75,7 +89,10 @@ async def complete_task(
             user_id, "task_completed", "Task Completed!",
             f"You earned {points} points for completing: {task.get('title')}"
         )
-        
+
+        # Keep PlantMind's persistent memory of this user's care habits current.
+        await GroqService.update_agent_profile_summary(user_id)
+
         return {
             "success": True,
             "task": task,

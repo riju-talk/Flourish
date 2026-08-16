@@ -1,8 +1,15 @@
 name: Keep Render backend warm
 
+# 5 minutes is the shortest interval GitHub Actions' schedule trigger reliably honors
+# (its own docs: "the shortest interval you can run scheduled workflows is once every
+# 5 minutes" - anything tighter gets silently delayed/dropped under load, and there's
+# no way to hit a true 15s cadence from a cron-triggered workflow at all). This is also
+# already well under Render free tier's 15-minute inactivity spin-down window, so it
+# fully prevents the cold-start/scheduler-death problem - going faster wouldn't add
+# any benefit, just more requests for nothing. See docs/02-Tech-Stack-Architecture.md §2.
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch: {}
 
 jobs:

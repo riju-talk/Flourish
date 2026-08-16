@@ -29,7 +29,7 @@ export const DailyChecklist = ({ tasks, isLoading }: DailyChecklistProps) => {
     if (!tasks || tasks.length === 0) {
         return (
             <div className="py-12 text-center bg-white/40 rounded-[2rem] border border-dashed border-white/40 italic text-muted-foreground">
-                <p className="text-lg font-medium text-emerald-700/60 mb-1">All caught up! 🎉</p>
+                <p className="text-lg font-medium text-emerald-700/60 mb-1">All caught up!</p>
                 <p className="text-sm">Your plants are thriving.</p>
             </div>
         );

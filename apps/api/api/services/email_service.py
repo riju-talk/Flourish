@@ -45,7 +45,7 @@ class EmailService:
         if not email:
             return None
 
-        html = f"<p>{message}</p><p style=\"color:#588157\">— Flourish 🌿</p>"
+        html = f"<p>{message}</p><p style=\"color:#588157\">— Flourish</p>"
         return await FirestoreDB.enqueue_email(
             user_id=user_id,
             to_email=email,

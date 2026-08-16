@@ -29,7 +29,7 @@ const AIAssistant: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
-      content: '🧠 Hello! I\'m PlantMind, your AI plant care agent. I can help you with plant health analysis, care schedules, problem diagnosis, and much more. How can I assist you today?',
+      content: 'Hello! I\'m PlantMind, your AI plant care agent. I can help you with plant health analysis, care schedules, problem diagnosis, and much more. How can I assist you today?',
       timestamp: new Date()
     }
   ])
@@ -63,7 +63,7 @@ const AIAssistant: React.FC = () => {
     onSuccess: (data) => {
       const analysisMessage: ChatMessage = {
         role: 'assistant',
-        content: `🔍 **Image Analysis Results:**\n\n**Health Assessment:** ${data.health_assessment}\n\n**Recommendations:**\n${data.recommendations.map((rec: string) => `• ${rec}`).join('\n')}\n\n**Confidence:** ${(data.confidence * 100).toFixed(0)}%`,
+        content: `**Image Analysis Results:**\n\n**Health Assessment:** ${data.health_assessment}\n\n**Recommendations:**\n${data.recommendations.map((rec: string) => `• ${rec}`).join('\n')}\n\n**Confidence:** ${(data.confidence * 100).toFixed(0)}%`,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, analysisMessage])

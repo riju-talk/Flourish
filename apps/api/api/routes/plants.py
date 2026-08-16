@@ -1,12 +1,15 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 from ..models.plant import Plant, HealthCheckItem, PlantInventory, CareSchedule
 from ..services.plant_service import PlantService
 from ..services.ai_service import AIService
 from ..services.autonomous_plant_service import AutonomousPlantService
 from ..services.groq_service import GroqService
+from ..services.perenual_service import PerenualService
+from ..services.tavily_service import TavilyService
+from ..services.plant_lookup_service import curate_plant_info
 from ..core.auth import verify_firebase_token
 from ..db.firestore import FirestoreDB
 from ..services.notification_service import NotificationService
@@ -27,21 +30,38 @@ async def agentic_plant_lookup(
     user_id: str = Depends(verify_firebase_token)
 ):
     """
-    Agentic Plant Lookup: Type a plant name and get comprehensive information
-    Uses Groq (LangChain agent) + external APIs to retrieve all relevant data
+    Explore/Plant Lookup: internet-first, not internet-only. Perenual (deterministic
+    plant-care database) and Tavily (live web search) are the sole sources of fact;
+    Groq then synthesizes them into one coherent, well-organized profile
+    (GroqService.curate_plant_lookup) instead of the raw keyword/sentence extraction
+    a purely rule-based pass produces. If that synthesis call fails for any reason
+    (the underlying model's json_mode is occasionally unreliable - see
+    groq_json_mode_flaky memory note), curate_plant_info's deterministic extraction is
+    the fallback, so a lookup never comes back empty just because Groq had a bad turn.
     """
     plant_name = payload.plant_name
     try:
-        plant_info = await GroqService.get_plant_info_agentic(plant_name)
+        perenual_info = await PerenualService.get_care_info(plant_name)
+        # If "plant_name" is a known-ambiguous colloquial name (e.g. "money plant"),
+        # search the web using the same disambiguated species Perenual resolved to,
+        # so Tavily and Perenual are grounded in the same plant rather than each
+        # independently guessing which of several common plants the query means.
+        search_query = PerenualService.resolve_alias(plant_name) or plant_name
+        tavily_results = await TavilyService.search_raw(
+            f"{search_query} plant care guide watering sunlight toxicity propagation native habitat"
+        )
 
-        # Fetch image from Unsplash
+        plant_info = await GroqService.curate_plant_lookup(plant_name, perenual_info, tavily_results)
+        if not plant_info:
+            plant_info = curate_plant_info(plant_name, perenual_info, tavily_results)
+
         try:
             image_url = await PlantService.fetch_plant_image(
                 plant_info.get("common_name", plant_name),
                 plant_info.get("scientific_name", "")
             )
             plant_info["image_url"] = image_url
-        except:
+        except Exception:
             plant_info["image_url"] = None
 
         return {
@@ -57,48 +77,34 @@ async def create_autonomous_plant(
     user_id: str = Depends(verify_firebase_token)
 ):
     """
-    Create a plant with AI-generated care schedule
+    Create a plant with AI-generated care info, grounded in Perenual's real plant-care
+    database wherever available (watering cadence, sunlight) rather than relying on
+    Groq's guess for those specific fields - see PlantService.resolve_care_info.
     """
     plant_name = payload.plant_name
     user_location = payload.user_location
     try:
-        # Get plant info from agentic lookup
         plant_info = await GroqService.get_plant_info_agentic(plant_name)
 
-        # Fetch image
-        image_url = None
-        try:
-            image_url = await PlantService.fetch_plant_image(
-                plant_info.get("common_name", plant_name),
-                plant_info.get("scientific_name", "")
-            )
-        except:
-            pass
-
-        watering = plant_info.get("watering") or {}
+        plant_data = await PlantService.build_new_plant_document(
+            user_id,
+            plant_name=plant_info.get("common_name") or plant_name,
+            location=user_location,
+            groq_plant_info=plant_info,
+            care_instructions=plant_info.get("interesting_facts") or "",
+        )
         fertilizing = plant_info.get("fertilizing") or {}
-        watering_days = _parse_frequency_days(watering.get("frequency"), default=7)
-        fertilizing_days = _parse_frequency_days(fertilizing.get("frequency"), default=30)
-
-        # Create plant
-        plant_data = {
-            "name": plant_info.get("common_name", plant_name),
-            "species": plant_info.get("scientific_name", ""),
-            "location": user_location or "Indoor",
-            "image_url": image_url,
-            "care_instructions": plant_info,
-            "health_status": "healthy",
-            "watering_frequency_days": watering_days,
-            "watering_amount": watering.get("amount", ""),
-            "fertilizer_frequency_days": fertilizing_days,
-            "fertilizer_type": fertilizing.get("type", ""),
-            "last_watered": None,
-            "next_watering": None
-        }
+        fertilizing_days = PlantService._parse_frequency_days(fertilizing.get("frequency")) or 30
+        plant_data["fertilizer_frequency_days"] = fertilizing_days
+        plant_data["fertilizer_type"] = fertilizing.get("type") or plant_data["fertilizer_type"]
 
         plant = await FirestoreDB.create_plant(user_id, plant_data)
 
         tasks = await PlantService.create_projected_schedule(user_id, plant)
+
+        # Keep PlantMind's persistent memory of this user's garden current the moment
+        # it changes, rather than waiting for the next chat turn to notice.
+        await GroqService.update_agent_profile_summary(user_id)
 
         return {
             "success": True,
@@ -107,21 +113,6 @@ async def create_autonomous_plant(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create plant: {str(e)}")
-
-def _parse_frequency_days(frequency: Optional[str], default: int) -> int:
-    """Best-effort extraction of a day count from Groq's free-text frequency string."""
-    if not frequency:
-        return default
-    import re
-    match = re.search(r'(\d+)', frequency)
-    if not match:
-        return default
-    days = int(match.group(1))
-    if "week" in frequency.lower():
-        days *= 7
-    elif "month" in frequency.lower():
-        days *= 30
-    return days if days > 0 else default
 
 @router.post("/")
 async def create_plant(

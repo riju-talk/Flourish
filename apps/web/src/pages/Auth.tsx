@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Seo } from '@/components/Seo';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Sparkles, CalendarCheck, MessagesSquare } from 'lucide-react';
@@ -36,11 +37,14 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Seo title="Sign In" description="Sign in to Flourish to start tracking and caring for your garden." />
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 rounded-3xl overflow-hidden shadow-xl border border-border">
         {/* Brand panel */}
         <div className="hidden md:flex flex-col justify-between bg-primary text-primary-foreground p-10">
           <div className="flex items-center gap-2.5">
-            <img src="/logo_transparent.png" alt="Flourish" className="w-9 h-9 object-contain" />
+            <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center shrink-0 p-1">
+              <img src="/logo_transparent.png" alt="Flourish" className="w-full h-full object-contain" />
+            </div>
             <span className="text-2xl font-serif font-semibold">Flourish</span>
           </div>
 
@@ -69,7 +73,9 @@ const Auth = () => {
         {/* Sign-in panel */}
         <div className="bg-card p-10 flex flex-col justify-center">
           <div className="md:hidden flex items-center gap-2.5 mb-8">
-            <img src="/logo.png" alt="Flourish" className="w-9 h-9 rounded-full object-cover" />
+            <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center shrink-0 p-1 border border-border">
+              <img src="/logo_transparent.png" alt="Flourish" className="w-full h-full object-contain" />
+            </div>
             <span className="text-2xl font-serif font-semibold text-primary">Flourish</span>
           </div>
 

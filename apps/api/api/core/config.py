@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     # Plant API Settings
     PLANT_ID_API_KEY: str = os.getenv("PLANT_ID_API_KEY", "")
 
+    # Perenual (perenual.com/docs/api) - deterministic plant-care database (watering
+    # cadence, sunlight requirement) used to ground "add to garden"/lookup/QA in real
+    # data instead of LLM-guessed values. See services/perenual_service.py.
+    PERENUAL_API_KEY: str = os.getenv("PERENUAL_API_KEY", "")
+
     # Weather API Settings
     OPENWEATHER_API_KEY: str = os.getenv("OPENWEATHER_API_KEY", "")
 
@@ -73,5 +78,11 @@ class Settings(BaseSettings):
 
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "change-this-secret-key-in-production")
+
+    # Shared secret for the /api/cron/* endpoints (see api/routes/cron.py). Serverless
+    # hosts (Vercel) can't run an in-process APScheduler - see scheduler_service.py -
+    # so an external scheduler (GitHub Actions cron) calls these instead, authenticated
+    # with this bearer token rather than a user's Firebase ID token.
+    CRON_SECRET: str = os.getenv("CRON_SECRET", "")
 
 settings = Settings()

@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export const Footer = () => {
   const year = new Date().getFullYear();
 
@@ -15,6 +17,9 @@ export const Footer = () => {
         </div>
 
         <div className="flex items-center gap-6 text-sm text-flourish-cream/70">
+          <Link to="/about" className="hover:text-flourish-cream transition-colors duration-500 ease-out">
+            About
+          </Link>
           <a href="#" className="hover:text-flourish-cream transition-colors duration-500 ease-out">
             Privacy Policy
           </a>

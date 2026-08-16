@@ -9,7 +9,7 @@ from .notification_service import NotificationService
 
 _scheduler: Optional[AsyncIOScheduler] = None
 
-async def _streak_risk_sweep() -> None:
+async def run_streak_risk_sweep() -> None:
     """Every hour: warn users whose streak is 20-24h from lapsing."""
     try:
         profiles = await FirestoreDB.get_all_profiles()
@@ -27,14 +27,14 @@ async def _streak_risk_sweep() -> None:
 
             hours_since = (now - last_dt).total_seconds() / 3600
             if 20 <= hours_since < 24:
-                title = "Your streak is at risk! 🔥"
+                title = "Your streak is at risk!"
                 message = f"Complete a care task today to keep your {streak_days}-day streak alive."
                 await NotificationService.notify(user_id, "streak_risk", title, message)
                 await EmailService.send_for_notification(user_id, "streak_risk", title, message, trigger="scheduled")
     except Exception as e:
         print(f"Streak-risk sweep error: {e}")
 
-async def _task_due_digest() -> None:
+async def run_task_due_digest() -> None:
     """Daily at 08:00: notify users who have tasks due today."""
     try:
         profiles = await FirestoreDB.get_all_profiles()
@@ -55,20 +55,20 @@ async def _task_due_digest() -> None:
                     due_today.append(task)
 
             if due_today:
-                title = "Today's care tasks 🌿"
+                title = "Today's care tasks"
                 message = f"You have {len(due_today)} task(s) due today."
                 await NotificationService.notify(user_id, "task_due", title, message)
                 await EmailService.send_for_notification(user_id, "task_due", title, message, trigger="scheduled")
     except Exception as e:
         print(f"Task-due digest error: {e}")
 
-async def _weekly_summary() -> None:
+async def run_weekly_summary() -> None:
     """Weekly on Monday 09:00: send an engagement summary email."""
     try:
         profiles = await FirestoreDB.get_all_profiles()
         for profile in profiles:
             user_id = profile.get("id")
-            subject = "Your week in the garden 🌿"
+            subject = "Your week in the garden"
             html = (
                 f"<p>Level {profile.get('level', 1)} · {profile.get('total_score', 0)} points · "
                 f"{profile.get('streak_days', 0)}-day streak.</p>"
@@ -80,17 +80,21 @@ async def _weekly_summary() -> None:
 
 def start_scheduler() -> AsyncIOScheduler:
     """
-    Start the in-process job scheduler. Only reliable because the deployed backend is
-    kept warm by the keep-alive CI ping - see docs/02-Tech-Stack-Architecture.md §2.
+    Start the in-process job scheduler. Only reliable on a host with a persistent,
+    continuously-running process (e.g. Render, kept warm by the keep-alive CI ping -
+    see docs/02-Tech-Stack-Architecture.md §2). Serverless hosts (Vercel) freeze/kill
+    the process between requests, so main.py skips calling this there and the same
+    three jobs run instead via /api/cron/* (api/routes/cron.py), triggered by an
+    external scheduler (GitHub Actions cron).
     """
     global _scheduler
     if _scheduler is not None:
         return _scheduler
 
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(_streak_risk_sweep, CronTrigger(minute=0), id="streak_risk_sweep", replace_existing=True)
-    scheduler.add_job(_task_due_digest, CronTrigger(hour=8, minute=0), id="task_due_digest", replace_existing=True)
-    scheduler.add_job(_weekly_summary, CronTrigger(day_of_week="mon", hour=9, minute=0), id="weekly_summary", replace_existing=True)
+    scheduler.add_job(run_streak_risk_sweep, CronTrigger(minute=0), id="streak_risk_sweep", replace_existing=True)
+    scheduler.add_job(run_task_due_digest, CronTrigger(hour=8, minute=0), id="task_due_digest", replace_existing=True)
+    scheduler.add_job(run_weekly_summary, CronTrigger(day_of_week="mon", hour=9, minute=0), id="weekly_summary", replace_existing=True)
     scheduler.start()
     _scheduler = scheduler
     return scheduler

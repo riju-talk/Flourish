@@ -1,0 +1,54 @@
+name: Vercel backend scheduled jobs
+
+# Vercel serverless functions have no persistent process, so the in-process
+# APScheduler in apps/api/api/services/scheduler_service.py only runs on hosts like
+# Render. When the API is deployed on Vercel instead, this workflow calls the same
+# three jobs via /api/cron/* on the schedule they'd otherwise run on. Not needed at
+# all if the API is deployed on Render - that host uses the in-process scheduler.
+
+on:
+  schedule:
+    - cron: "0 * * * *"      # streak-risk-sweep: hourly, on the hour
+    - cron: "0 8 * * *"      # task-due-digest: daily at 08:00 UTC
+    - cron: "0 9 * * 1"      # weekly-summary: Mondays at 09:00 UTC
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Job to run when triggered manually"
+        type: choice
+        options: [streak-risk-sweep, task-due-digest, weekly-summary]
+        default: streak-risk-sweep
+
+jobs:
+  run-job:
+    name: Call /api/cron endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check VERCEL_API_URL is configured
+        run: |
+          if [ -z "${{ vars.VERCEL_API_URL }}" ]; then
+            echo "VERCEL_API_URL repo variable is not set - skipping. Set it under Settings > Secrets and variables > Actions > Variables once the backend is deployed on Vercel."
+            exit 0
+          fi
+
+      - name: Determine which job this trigger is for
+        if: vars.VERCEL_API_URL != ''
+        id: job
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "path=${{ inputs.job }}" >> "$GITHUB_OUTPUT"
+          else
+            case "${{ github.event.schedule }}" in
+              "0 * * * *") echo "path=streak-risk-sweep" >> "$GITHUB_OUTPUT" ;;
+              "0 8 * * *") echo "path=task-due-digest" >> "$GITHUB_OUTPUT" ;;
+              "0 9 * * 1") echo "path=weekly-summary" >> "$GITHUB_OUTPUT" ;;
+            esac
+          fi
+
+      - name: Trigger job
+        if: vars.VERCEL_API_URL != ''
+        run: |
+          curl -fsS --max-time 30 -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ vars.VERCEL_API_URL }}/api/cron/${{ steps.job.outputs.path }}" \
+            || echo "Cron call failed for ${{ steps.job.outputs.path }}"
