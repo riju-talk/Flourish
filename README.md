@@ -1,9 +1,5 @@
 <p align="center">
-  <br>
-  <img src="docs/logo.png" alt="Flourish Logo" width="600">
-  <br>
-  <i>A look at your digital garden.</i>
-  <br>
+  <img src="docs/logo.png" alt="Flourish Logo" width="600" style="border-radius: 24px;">
 </p>
 
 
