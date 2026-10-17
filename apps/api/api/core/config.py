@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     
     # AI Settings
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "qwen/qwen3-32b")
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
 
     # Image Settings - an Unsplash app has three credentials; only the Access Key is

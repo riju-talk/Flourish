@@ -62,7 +62,7 @@ def test_groq_defaults():
     Explicitly overrides GROQ_API_KEY so this doesn't depend on whether the local
     .env happens to have a real key configured."""
     settings = Settings(GROQ_API_KEY="")
-    assert settings.GROQ_MODEL == "qwen/qwen3.6-27b"
+    assert settings.GROQ_MODEL == "qwen/qwen3-32b"
     assert settings.GROQ_API_KEY == ""
 
 
