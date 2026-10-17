@@ -274,14 +274,14 @@ export async function lookupPlant(plantName: string) {
   return data;
 }
 
-// ---- MCP INTEGRATION ----
+// ---- CARE CONTEXT (weather + botanical data) ----
 export async function getWeatherData(lat: number, lon: number) {
-  const { data } = await api.get(`/mcp/weather/${lat}/${lon}`);
+  const { data } = await api.get(`/context/weather/${lat}/${lon}`);
   return data;
 }
 
-export async function getPlantInfoMCP(plantName: string) {
-  const { data } = await api.get(`/mcp/plant-info/${plantName}`);
+export async function getPlantInfoContext(plantName: string) {
+  const { data } = await api.get(`/context/plant-info/${plantName}`);
   return data;
 }
 

@@ -44,7 +44,7 @@
 | Storage | Firebase Cloud Storage |
 | LLM | **Groq** via **LangChain** (`langchain-groq` + `langchain.agents` tool-calling agent; plain LangChain, no LangGraph). This is the sole LLM backend (chat, agentic lookup, recommendations). Ollama has been retired; there is no local-model fallback. |
 | Agent tools | **Tavily** (web search, via `langchain-tavily`), **OpenWeatherMap** (weather), internal Firestore reads, all wired as LangChain `@tool`s bound per-request to the calling user |
-| QA | Real **MCP server** (`mcp_server.py`, official `mcp` SDK + FastMCP) exposing agentic QA tools against a running instance. Separate from the `/api/mcp` REST routes below, which just reuse the "MCP" label |
+| QA | Real **MCP server** (`mcp_server.py`, official `mcp` SDK + FastMCP) exposing agentic QA tools against a running instance. This is the only Model Context Protocol code in the repo; the `/api/context` REST routes below are just ordinary endpoints (they used to be mislabeled "MCP") |
 | Images | **Unsplash**, fetches a representative photo for a plant by name/species; used for `plants.image_url` on add/lookup and for `recommendations.image_url` |
 | Email | Firebase **Trigger Email** extension (Firestore-triggered via a `mail` collection), plus an in-process scheduler for automated sends (see §5) |
 | External | OpenWeatherMap, Unsplash, Plant.ID, Tavily (optional/required keys, see §6) |
@@ -89,7 +89,7 @@ exact steps.
 │     FastAPI Backend :8000   │
 │  routes/ (auth, plants,     │
 │  tasks, dashboard, chat,    │
-│  images, mcp,               │
+│  images, context,           │
 │  notifications, leaderboard,│
 │  recommendations, storage)  │
 │  services/ (Groq agent,     │
@@ -170,7 +170,7 @@ Flourish/
 │   │   │   ├── db/                 # firestore.py, storage.py, session.py (empty)
 │   │   │   ├── models/             # plant.py, task.py, chat.py, db_models.py (legacy)
 │   │   │   ├── routes/             # plants, tasks, dashboard, chat,
-│   │   │   │                       # images, mcp, notifications, leaderboard,
+│   │   │   │                       # images, context, notifications, leaderboard,
 │   │   │   │                       # recommendations, storage, auth
 │   │   │   └── services/           # groq_service, plant_service (Unsplash),
 │   │   │                           # tavily_service, weather_service, plant_id_service,
@@ -275,11 +275,15 @@ request to `/api/auth/profile` requires a valid Firebase token**.
 |---|---|---|
 | GET | `/plant/{plant_name}` | Unsplash image by name/species |
 
-### MCP (Model Context Protocol): `/api/mcp`
+### Care Context: `/api/context`
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/weather/{lat}/{lon}` | Weather + humidity-based recommendation |
 | GET | `/plant-info/{name}` | Botanical/care data via Groq |
+
+> Plain REST endpoints supplying real-time external data for care advice. Formerly
+> mounted at `/api/mcp` and labeled "MCP" - renamed because they are **not** a Model
+> Context Protocol server. The only real MCP code is `apps/api/mcp_server.py` (§5).
 
 ### Recommendations: `/api/recommendations`
 | Method | Path | Purpose |

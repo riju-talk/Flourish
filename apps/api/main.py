@@ -3,7 +3,7 @@ from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from api.routes import plants, dashboard, chat, tasks, images, mcp, notifications, leaderboard, storage, auth, recommendations, cron
+from api.routes import plants, dashboard, chat, tasks, images, context, notifications, leaderboard, storage, auth, recommendations, cron
 from api.core.config import settings
 from api.core.auth import verify_firebase_token
 from api.services.scheduler_service import start_scheduler, stop_scheduler
@@ -74,7 +74,7 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"]
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(images.router, prefix="/api/images", tags=["images"], dependencies=[Depends(verify_firebase_token)])
-app.include_router(mcp.router, prefix="/api/mcp", tags=["mcp"], dependencies=[Depends(verify_firebase_token)])
+app.include_router(context.router, prefix="/api/context", tags=["context"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])  # HTTP routes each self-enforce verify_firebase_token; a router-level dependency here crashes the /ws route (HTTPBearer can't read a WebSocket's headers)
 app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["leaderboard"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(storage.router, prefix="/api/storage", tags=["storage"], dependencies=[Depends(verify_firebase_token)])
@@ -93,7 +93,7 @@ async def root():
             "Task Scheduling & Calendar",
             "Real-time Notifications & Email",
             "Gamification & Leaderboard",
-            "MCP Server Integration"
+            "Weather-Aware Care Context"
         ]
     }
 

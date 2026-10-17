@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from langchain_groq import ChatGroq
@@ -15,6 +16,8 @@ from .weather_service import WeatherService
 from .tavily_service import TavilyService
 from .plant_service import PlantService
 from .perenual_service import PerenualService
+
+logger = logging.getLogger(__name__)
 
 PLANT_MIND_SYSTEM_PROMPT = """You are PlantMind, Flourish's autonomous garden agent. You are proactive,
 knowledgeable, and caring about plant health.
@@ -175,10 +178,18 @@ class GroqService:
             await GroqService.update_agent_profile_summary(user_id)
             return ChatResponse(response=content, suggestions=suggestions)
         except Exception as e:
-            print(f"Groq Chat Error: {e}")
+            # Log the exception type and traceback: the message below is shown for every
+            # failure (bad model id, 403/429 from Groq, SDK mismatch, tool errors), so the
+            # server log is the only place the real cause is visible.
+            logger.exception("Groq chat failed (%s, model=%s)", type(e).__name__, settings.GROQ_MODEL)
+            if not settings.GROQ_API_KEY:
+                message = ("PlantMind isn't configured on the server yet (GROQ_API_KEY is "
+                           "missing). Please try again later.")
+            else:
+                message = ("I'm having trouble reaching PlantMind right now. Please try again "
+                           "shortly.")
             return ChatResponse(
-                response="I'm having trouble reaching PlantMind right now. Please check that "
-                         "GROQ_API_KEY is configured and try again shortly.",
+                response=message,
                 suggestions=["Check backend configuration", "Try again in a moment"]
             )
 

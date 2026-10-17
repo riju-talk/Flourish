@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Droplets, FlaskConical, ClipboardCheck } from 'lucide-react';
-import { getAllUpcomingTasks, getPlants } from '@/integrations/api';
+import { generateTasksForPlant, getAllUpcomingTasks, getPlants } from '@/integrations/api';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const TASK_STYLE: Record<string, { dot: string; icon: React.ReactNode; label: string }> = {
@@ -32,6 +32,23 @@ const CareCalendar: React.FC = () => {
     queryKey: ['plants'],
     queryFn: getPlants,
   });
+
+  // Plants added before schedules were generated (or whose generation failed) have no
+  // upcoming tasks, so the calendar would stay empty forever. The endpoint only creates
+  // task types a plant is missing, so backfilling here is safe to repeat.
+  const queryClient = useQueryClient();
+  const backfilledPlantIds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!tasks || !plants) return;
+    const plantsWithTasks = new Set(tasks.map((t: any) => t.plant_id));
+    const unscheduled = plants.filter((p: any) => !plantsWithTasks.has(p.id) && !backfilledPlantIds.current.has(p.id));
+    if (unscheduled.length === 0) return;
+    unscheduled.forEach((p: any) => backfilledPlantIds.current.add(p.id));
+    Promise.allSettled(unscheduled.map((p: any) => generateTasksForPlant(p.id))).then(() => {
+      queryClient.invalidateQueries({ queryKey: ['upcoming-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['today-schedule'] });
+    });
+  }, [tasks, plants, queryClient]);
 
   const plantNameById = useMemo(() => {
     const map: Record<string, string> = {};

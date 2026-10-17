@@ -26,5 +26,11 @@ jobs:
 
       - name: Ping backend health endpoint
         if: vars.RENDER_API_URL != ''
+        # Strip any trailing slash so a variable like "https://x.onrender.com/" doesn't
+        # produce "//health" (404). A cold start on Render free tier can take 30-60s,
+        # so allow 90s and retry once before giving up.
         run: |
-          curl -fsS --max-time 20 "${{ vars.RENDER_API_URL }}/health" || echo "Ping failed - backend may be cold-starting or down."
+          BASE_URL="${{ vars.RENDER_API_URL }}"
+          BASE_URL="${BASE_URL%/}"
+          curl -fsS --max-time 90 --retry 2 --retry-delay 5 --retry-all-errors "$BASE_URL/health" \
+            || echo "::warning::Ping failed - backend may be cold-starting or down."

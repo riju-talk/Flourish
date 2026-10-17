@@ -1,10 +1,10 @@
 """
 Flourish QA MCP server.
 
-A real Model Context Protocol server (not the /api/mcp REST routes, which are just
-REST endpoints labeled "MCP" - see docs/02-Tech-Stack-Architecture.md §1) that lets an
-MCP client (Claude Code, Claude Desktop, etc.) drive agentic QA against a running
-Flourish backend: check liveness, inspect the route contract, and exercise
+A real Model Context Protocol server - the only MCP code in this repo (the /api/context
+REST routes are ordinary endpoints, not MCP; see docs/02-Tech-Stack-Architecture.md §1).
+It lets an MCP client (Claude Code, Claude Desktop, etc.) drive agentic QA against a
+running Flourish backend: check liveness, inspect the route contract, and exercise
 authenticated flows end-to-end using a Firebase ID token supplied per call.
 
 No credentials are stored in this server - the QA operator/agent passes a Firebase ID
