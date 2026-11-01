@@ -15,7 +15,7 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
-        value: "qwen/qwen3-32b"
+        value: "qwen/qwen3.8-27b"
       - key: TAVILY_API_KEY
         sync: false
       - key: PERENUAL_API_KEY

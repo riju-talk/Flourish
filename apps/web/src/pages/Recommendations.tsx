@@ -26,7 +26,7 @@ export default function RecommendationsPage() {
   });
 
   const generateMutation = useMutation({
-    mutationFn: (opts?: { silent?: boolean }) => generateRecommendations(3),
+    mutationFn: (_opts: { silent?: boolean }) => generateRecommendations(3),
     onSuccess: (data, variables) => {
       // Merge the freshly-generated picks straight into the cache instead of only
       // invalidating - invalidateQueries only refetches *active* queries in the
@@ -96,7 +96,7 @@ export default function RecommendationsPage() {
             </p>
           </div>
           <Button
-            onClick={() => generateMutation.mutate()}
+            onClick={() => generateMutation.mutate({})}
             disabled={generateMutation.isPending}
             className="vibrant-gradient text-primary-foreground font-semibold rounded-full shadow-md hover:shadow-lg transition-shadow duration-500"
           >
@@ -133,7 +133,7 @@ export default function RecommendationsPage() {
               Add a few plants, then ask PlantMind for suggestions tailored to your space.
             </p>
             <Button
-              onClick={() => generateMutation.mutate()}
+              onClick={() => generateMutation.mutate({})}
               disabled={generateMutation.isPending}
               className="vibrant-gradient text-primary-foreground font-semibold rounded-full shadow-md hover:shadow-lg transition-shadow duration-500"
             >

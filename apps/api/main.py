@@ -55,6 +55,11 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     print("Starting Flourish API...")
+    if settings.ai_configured:
+        print(f"AI enabled (Groq model: {settings.GROQ_MODEL})")
+    else:
+        print("WARNING: GROQ_API_KEY is not set - PlantMind chat, plant lookup and "
+              "recommendations will return fallback responses until it is configured.")
     print("Firebase Firestore ready!")
     print("No database setup needed - using Firebase!")
     if IS_SERVERLESS:
@@ -76,7 +81,7 @@ app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"], dependenci
 app.include_router(images.router, prefix="/api/images", tags=["images"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(context.router, prefix="/api/context", tags=["context"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])  # HTTP routes each self-enforce verify_firebase_token; a router-level dependency here crashes the /ws route (HTTPBearer can't read a WebSocket's headers)
-app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["leaderboard"], dependencies=[Depends(verify_firebase_token)])
+app.include_router(leaderboard.router, prefix="/api/leaderboard", tags=["leaderboard"]) # HTTP routes each self-enforce verify_firebase_token; the /ws route verifies a query-param token itself (same reason as notifications)
 app.include_router(storage.router, prefix="/api/storage", tags=["storage"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(recommendations.router, prefix="/api/recommendations", tags=["recommendations"], dependencies=[Depends(verify_firebase_token)])
 app.include_router(cron.router, prefix="/api/cron", tags=["cron"])  # self-enforces CRON_SECRET, not a Firebase user token - see routes/cron.py
@@ -99,7 +104,13 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "Flourish API"}
+    # Booleans/model name only - never the key itself. Lets you confirm after setting
+    # GROQ_API_KEY on the host that the deployment actually picked it up.
+    return {
+        "status": "ok",
+        "service": "Flourish API",
+        "ai": {"configured": settings.ai_configured, "model": settings.GROQ_MODEL},
+    }
 
 if __name__ == "__main__":
     import uvicorn

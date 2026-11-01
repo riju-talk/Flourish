@@ -10,6 +10,7 @@ from ..services.groq_service import GroqService
 from ..services.perenual_service import PerenualService
 from ..services.tavily_service import TavilyService
 from ..services.plant_lookup_service import curate_plant_info
+from ..services.plant_knowledge_service import lookup_plant
 from ..core.auth import verify_firebase_token
 from ..db.firestore import FirestoreDB
 from ..services.notification_service import NotificationService
@@ -41,19 +42,7 @@ async def agentic_plant_lookup(
     """
     plant_name = payload.plant_name
     try:
-        perenual_info = await PerenualService.get_care_info(plant_name)
-        # If "plant_name" is a known-ambiguous colloquial name (e.g. "money plant"),
-        # search the web using the same disambiguated species Perenual resolved to,
-        # so Tavily and Perenual are grounded in the same plant rather than each
-        # independently guessing which of several common plants the query means.
-        search_query = PerenualService.resolve_alias(plant_name) or plant_name
-        tavily_results = await TavilyService.search_raw(
-            f"{search_query} plant care guide watering sunlight toxicity propagation native habitat"
-        )
-
-        plant_info = await GroqService.curate_plant_lookup(plant_name, perenual_info, tavily_results)
-        if not plant_info:
-            plant_info = curate_plant_info(plant_name, perenual_info, tavily_results)
+        plant_info = await lookup_plant(plant_name)
 
         try:
             image_url = await PlantService.fetch_plant_image(

@@ -1,9 +1,4 @@
-interface LogLevel {
-  ERROR: 'error';
-  WARN: 'warn';
-  INFO: 'info';
-  DEBUG: 'debug';
-}
+type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 interface LogContext {
   userId?: string;
@@ -14,12 +9,12 @@ interface LogContext {
 
 class Logger {
   private static instance: Logger;
-  private logLevel: keyof LogLevel = 'info';
+  private logLevel: LogLevel = 'info';
   private isProduction: boolean;
 
   constructor() {
-    this.isProduction = process.env.NODE_ENV === 'production';
-    this.logLevel = (process.env.REACT_APP_LOG_LEVEL as keyof LogLevel) || 'info';
+    this.isProduction = import.meta.env.PROD;
+    this.logLevel = (import.meta.env.VITE_LOG_LEVEL as LogLevel) || 'info';
   }
 
   static getInstance(): Logger {
@@ -29,21 +24,21 @@ class Logger {
     return Logger.instance;
   }
 
-  private shouldLog(level: keyof LogLevel): boolean {
+  private shouldLog(level: LogLevel): boolean {
     const levels = ['debug', 'info', 'warn', 'error'];
     const currentLevelIndex = levels.indexOf(this.logLevel);
     const messageLevelIndex = levels.indexOf(level);
     return messageLevelIndex >= currentLevelIndex;
   }
 
-  private formatMessage(level: keyof LogLevel, message: string, context?: LogContext): string {
+  private formatMessage(level: LogLevel, message: string, context?: LogContext): string {
     const timestamp = new Date().toISOString();
     const userId = context?.userId || 'anonymous';
 
     return `[${timestamp}] [${level.toUpperCase()}] [${userId}] ${message}`;
   }
 
-  private async sendToAnalytics(level: keyof LogLevel, message: string, context?: LogContext) {
+  private async sendToAnalytics(level: LogLevel, message: string, context?: LogContext) {
     // In production, send to analytics service
     if (this.isProduction && level === 'error') {
       try {

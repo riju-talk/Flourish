@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Trophy, Mail, Phone, Flame } from 'lucide-react';
 import { getLeaderboard, getUserStats } from '@/integrations/api';
 import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/lib/firebase';
 
 interface LeaderboardEntry {
   rank: number;
@@ -58,30 +59,91 @@ export default function Leaderboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
+  const mapEntries = (rows: any[]): LeaderboardEntry[] =>
+    (rows || []).map((entry: any) => ({
+      rank: entry.rank || 0,
+      user_id: entry.id,
+      display_name: entry.display_name || 'Unknown',
+      photo_url: entry.photo_url,
+      score: entry.total_score || 0,
+      tasks_completed: entry.tasks_completed || 0,
+      level: entry.level || 1,
+      streak: entry.streak_days || 0,
+      is_current_user: entry.id === user?.uid,
+      email: entry.email,
+      phone_number: entry.phone_number,
+    }));
+
   const fetchLeaderboard = async () => {
     try {
       setLoading(true);
       const data = await getLeaderboard(period, 100);
-      const mapped = (data.leaderboard || []).map((entry: any) => ({
-        rank: entry.rank || 0,
-        user_id: entry.id,
-        display_name: entry.display_name || 'Unknown',
-        photo_url: entry.photo_url,
-        score: entry.total_score || 0,
-        tasks_completed: entry.tasks_completed || 0,
-        level: entry.level || 1,
-        streak: entry.streak_days || 0,
-        is_current_user: entry.id === user?.uid,
-        email: entry.email,
-        phone_number: entry.phone_number,
-      }));
-      setLeaderboard(mapped);
+      setLeaderboard(mapEntries(data.leaderboard));
     } catch (error) {
       console.error('Failed to fetch leaderboard:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Live updates: the server pushes the top-100 over this socket whenever any score
+  // changes (see LeaderboardHub on the backend), so ranks move the moment someone
+  // completes a task. The 30s poll is the fallback while the socket is down or on a
+  // host without WebSocket support (same approach as NotificationCenter).
+  const mapEntriesRef = useRef(mapEntries);
+  mapEntriesRef.current = mapEntries;
+  const statsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      fetchLeaderboard();
+      fetchUserStats();
+    }, 30000);
+
+    const wsBase = (import.meta.env.VITE_WS_URL as string) || (import.meta.env.DEV ? 'ws://localhost:8000' : '');
+    let cancelled = false;
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = async () => {
+      if (cancelled || !wsBase) return;
+      const token = await auth.currentUser?.getIdToken().catch(() => null);
+      if (!token || cancelled) return;
+
+      ws = new WebSocket(`${wsBase}/api/leaderboard/ws?token=${encodeURIComponent(token)}`);
+      ws.onmessage = (event) => {
+        let msg: any;
+        try {
+          msg = JSON.parse(event.data);
+        } catch {
+          return; // "pong" keepalive
+        }
+        if (msg?.type !== 'leaderboard') return;
+        setLeaderboard(mapEntriesRef.current(msg.leaderboard));
+        setLoading(false);
+        // Own rank/score can change with the same event - refresh it, debounced so a
+        // burst of updates is one request.
+        if (statsTimerRef.current) clearTimeout(statsTimerRef.current);
+        statsTimerRef.current = setTimeout(fetchUserStats, 500);
+      };
+      ws.onclose = () => {
+        ws = null;
+        if (!cancelled) reconnectTimer = setTimeout(connect, 5000);
+      };
+      ws.onerror = () => ws?.close();
+    };
+    connect();
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (statsTimerRef.current) clearTimeout(statsTimerRef.current);
+      ws?.close();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const fetchUserStats = async () => {
     try {

@@ -31,7 +31,7 @@ class ErrorBoundary extends Component<Props, State> {
     });
 
     // Log error to analytics service in production
-    if (process.env.NODE_ENV === 'production') {
+    if (import.meta.env.PROD) {
       // logErrorToAnalytics(error, errorInfo);
     }
   }
@@ -59,7 +59,7 @@ class ErrorBoundary extends Component<Props, State> {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {import.meta.env.DEV && this.state.error && (
                 <details className="text-sm">
                   <summary className="cursor-pointer text-muted-foreground mb-2">
                     Error Details (Development Only)

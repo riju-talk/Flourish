@@ -61,6 +61,8 @@ describe('App', () => {
     // Routes are lazy-loaded (see App.tsx) - the Suspense fallback renders first, so
     // wait for the real page content instead of asserting synchronously.
     // "Flourish" legitimately appears more than once (navbar wordmark + footer).
-    expect((await screen.findAllByText('Flourish')).length).toBeGreaterThan(0);
-  });
+    // The first lazy import transforms the whole page tree in jsdom, which can exceed
+    // the 1s findBy default on a cold run - give it room.
+    expect((await screen.findAllByText('Flourish', {}, { timeout: 15000 })).length).toBeGreaterThan(0);
+  }, 20000);
 });

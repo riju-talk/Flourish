@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from ..core.config import settings
 
 class TavilyService:
@@ -20,7 +20,7 @@ class TavilyService:
             return f"Web search failed: {e}"
 
     @staticmethod
-    async def search_raw(query: str, max_results: int = 5) -> List[Dict[str, Any]]:
+    async def search_raw(query: str, max_results: int = 5, include_domains: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """
         Structured (non-summarized) search results - [{title, url, content}, ...] - for
         callers that curate the results themselves with rule-based logic instead of
@@ -31,7 +31,10 @@ class TavilyService:
         try:
             from langchain_tavily import TavilySearch
 
-            search_tool = TavilySearch(max_results=max_results, tavily_api_key=settings.TAVILY_API_KEY)
+            kwargs: Dict[str, Any] = {"max_results": max_results, "tavily_api_key": settings.TAVILY_API_KEY}
+            if include_domains:
+                kwargs["include_domains"] = include_domains
+            search_tool = TavilySearch(**kwargs)
             result = await search_tool.ainvoke({"query": query})
             if isinstance(result, dict):
                 return result.get("results") or []

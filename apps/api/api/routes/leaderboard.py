@@ -1,12 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException
-from typing import List, Dict
+import asyncio
+import logging
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from firebase_admin import auth as firebase_auth
+from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 from ..db.firestore import FirestoreDB
-from ..core.auth import verify_firebase_token
+from ..core.auth import verify_firebase_token, ensure_firebase_initialized
 from ..services.email_service import EmailService
 from ..services.notification_service import NotificationService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 def calculate_level(score: int) -> int:
     """Calculate user level based on score (1000 points per level)"""
@@ -98,6 +102,7 @@ def _public_leaderboard_entry(entry: Dict, rank: int, viewer_id: str) -> Dict:
         "total_score": entry.get("total_score", 0),
         "level": entry.get("level", 1),
         "streak_days": entry.get("streak_days", 0),
+        "tasks_completed": entry.get("tasks_completed", 0),
         "achievements": entry.get("achievements", []),
         "rank": rank
     }
@@ -108,6 +113,89 @@ def _public_leaderboard_entry(entry: Dict, rank: int, viewer_id: str) -> Dict:
         row["phone_number"] = entry.get("phone_number")
 
     return row
+
+class LeaderboardHub:
+    """
+    Live leaderboard: one shared Firestore listener on the top-100 profiles, fanned
+    out to every connected WebSocket. The listener runs only while at least one client
+    is connected (it's started by the first connect, stopped by the last disconnect),
+    so an idle server holds no open Firestore stream. Each client gets rows rendered
+    for *its* uid, so the privacy rules in _public_leaderboard_entry still apply per
+    viewer rather than leaking one viewer's own-row contact info to the rest.
+    """
+
+    def __init__(self):
+        self.clients: Dict[WebSocket, str] = {}
+        self._watch = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._latest: Optional[List[Dict]] = None
+
+    async def connect(self, websocket: WebSocket, user_id: str):
+        await websocket.accept()
+        self.clients[websocket] = user_id
+        if self._watch is None:
+            self._loop = asyncio.get_running_loop()
+            self._watch = FirestoreDB.listen_leaderboard(self._on_rows)
+        elif self._latest is not None:
+            await self._send(websocket, user_id, self._latest)
+
+    def disconnect(self, websocket: WebSocket):
+        self.clients.pop(websocket, None)
+        if not self.clients and self._watch is not None:
+            try:
+                self._watch.unsubscribe()
+            except Exception:
+                logger.exception("Failed to unsubscribe leaderboard listener")
+            self._watch = None
+            self._latest = None
+
+    def _on_rows(self, rows: List[Dict]):
+        # Called on Firestore's listener thread - hand off to the event loop.
+        if self._loop is not None and not self._loop.is_closed():
+            asyncio.run_coroutine_threadsafe(self._broadcast(rows), self._loop)
+
+    async def _broadcast(self, rows: List[Dict]):
+        self._latest = rows
+        for websocket, user_id in list(self.clients.items()):
+            await self._send(websocket, user_id, rows)
+
+    async def _send(self, websocket: WebSocket, user_id: str, rows: List[Dict]):
+        payload = {
+            "type": "leaderboard",
+            "leaderboard": [_public_leaderboard_entry(e, i, user_id) for i, e in enumerate(rows, 1)],
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+        }
+        try:
+            await websocket.send_json(payload)
+        except Exception:
+            self.disconnect(websocket)
+
+hub = LeaderboardHub()
+
+@router.websocket("/ws")
+async def leaderboard_ws(websocket: WebSocket, token: str = Query(...)):
+    """
+    Live leaderboard stream. Same auth approach as the notifications socket: browsers
+    can't set an Authorization header on a WebSocket, so the Firebase ID token comes
+    as a query param and is verified directly (and this router therefore carries no
+    router-level HTTPBearer dependency - see main.py).
+    """
+    ensure_firebase_initialized()
+    try:
+        user_id = firebase_auth.verify_id_token(token)["uid"]
+    except Exception:
+        await websocket.close(code=4401)
+        return
+
+    await hub.connect(websocket, user_id)
+    try:
+        while True:
+            if await websocket.receive_text() == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        pass
+    finally:
+        hub.disconnect(websocket)
 
 @router.get("/leaderboard")
 async def get_leaderboard(

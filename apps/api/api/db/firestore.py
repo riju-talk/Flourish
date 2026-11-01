@@ -30,6 +30,8 @@ HEALTH_CHECKS_COLLECTION = "health_checks"
 RECOMMENDATIONS_COLLECTION = "recommendations"
 EMAIL_LOGS_COLLECTION = "email_logs"
 MAIL_COLLECTION = "mail"
+CHAT_SESSIONS_COLLECTION = "chat_sessions"
+CHAT_MESSAGES_SUBCOLLECTION = "messages"
 
 class FirestoreDB:
     """Firestore database operations"""
@@ -360,6 +362,99 @@ class FirestoreDB:
         """Update a recommendation"""
         get_db().collection(RECOMMENDATIONS_COLLECTION).document(rec_id).update(updates)
 
+    # ============ CHAT SESSIONS ============
+    # One document per conversation in `chat_sessions`, with its turns in a `messages`
+    # subcollection (keeps a long chat far from the 1 MiB document limit). Timestamps
+    # here are plain UTC datetimes rather than firestore.SERVER_TIMESTAMP, so the dicts
+    # these methods return are always directly serializable (no Sentinel bug - see
+    # _read_back) and messages written back-to-back keep a strict order. Queries filter
+    # on user_id only and sort in Python, so no composite index is required.
+
+    @staticmethod
+    def _now() -> datetime:
+        from datetime import timezone
+        return datetime.now(timezone.utc)
+
+    @staticmethod
+    async def create_chat_session(user_id: str, title: Optional[str] = None) -> Dict:
+        session_id = FirestoreDB.generate_id()
+        now = FirestoreDB._now()
+        data = {
+            "user_id": user_id,
+            "title": (title or "New chat").strip()[:80] or "New chat",
+            "title_locked": bool(title),
+            "message_count": 0,
+            "created_at": now,
+            "updated_at": now,
+        }
+        get_db().collection(CHAT_SESSIONS_COLLECTION).document(session_id).set(data)
+        return {"id": session_id, **data}
+
+    @staticmethod
+    async def get_chat_session(session_id: str, user_id: str) -> Optional[Dict]:
+        """Returns None for a missing session AND for one owned by someone else."""
+        doc = get_db().collection(CHAT_SESSIONS_COLLECTION).document(session_id).get()
+        if not doc.exists:
+            return None
+        data = doc.to_dict()
+        if data.get("user_id") != user_id:
+            return None
+        data["id"] = doc.id
+        return data
+
+    @staticmethod
+    async def list_chat_sessions(user_id: str) -> List[Dict]:
+        docs = get_db().collection(CHAT_SESSIONS_COLLECTION).where("user_id", "==", user_id).stream()
+        sessions = []
+        for doc in docs:
+            data = doc.to_dict()
+            data["id"] = doc.id
+            sessions.append(data)
+        sessions.sort(key=lambda s: s.get("updated_at") or s.get("created_at"), reverse=True)
+        return sessions
+
+    @staticmethod
+    async def update_chat_session(session_id: str, updates: Dict) -> None:
+        get_db().collection(CHAT_SESSIONS_COLLECTION).document(session_id).update(updates)
+
+    @staticmethod
+    async def get_chat_messages(session_id: str, limit: Optional[int] = None) -> List[Dict]:
+        """Messages oldest-first; with `limit`, the most recent `limit` messages."""
+        coll = (get_db().collection(CHAT_SESSIONS_COLLECTION).document(session_id)
+                .collection(CHAT_MESSAGES_SUBCOLLECTION))
+        if limit:
+            docs = list(coll.order_by("created_at", direction=firestore.Query.DESCENDING).limit(limit).stream())
+            docs.reverse()
+        else:
+            docs = list(coll.order_by("created_at").stream())
+        messages = []
+        for doc in docs:
+            data = doc.to_dict()
+            data["id"] = doc.id
+            messages.append(data)
+        return messages
+
+    @staticmethod
+    async def add_chat_message(session_id: str, role: str, content: str,
+                               suggestions: Optional[List[str]] = None) -> Dict:
+        msg_id = FirestoreDB.generate_id()
+        data = {
+            "role": role,
+            "content": content,
+            "suggestions": suggestions or [],
+            "created_at": FirestoreDB._now(),
+        }
+        (get_db().collection(CHAT_SESSIONS_COLLECTION).document(session_id)
+         .collection(CHAT_MESSAGES_SUBCOLLECTION).document(msg_id).set(data))
+        return {"id": msg_id, **data}
+
+    @staticmethod
+    async def delete_chat_session(session_id: str) -> None:
+        ref = get_db().collection(CHAT_SESSIONS_COLLECTION).document(session_id)
+        for doc in ref.collection(CHAT_MESSAGES_SUBCOLLECTION).stream():
+            doc.reference.delete()
+        ref.delete()
+
     # ============ EMAIL (mail + email_logs) ============
 
     @staticmethod
@@ -404,7 +499,28 @@ class FirestoreDB:
         return logs
 
     # ============ LEADERBOARD ============
-    
+
+    @staticmethod
+    def listen_leaderboard(callback, limit: int = 100):
+        """
+        Subscribe to the top-`limit` profiles by score. Firestore invokes
+        callback(rows) from its own background thread - once with the initial
+        result, then again whenever any profile in that window changes. Returns the
+        Watch; call .unsubscribe() on it to stop listening.
+        """
+        query = get_db().collection(PROFILES_COLLECTION).order_by(
+            'total_score', direction=firestore.Query.DESCENDING).limit(limit)
+
+        def _on_snapshot(docs, _changes, _read_time):
+            rows = []
+            for doc in docs:
+                data = doc.to_dict()
+                data['id'] = doc.id
+                rows.append(data)
+            callback(rows)
+
+        return query.on_snapshot(_on_snapshot)
+
     @staticmethod
     async def get_leaderboard(limit: int = 100) -> List[Dict]:
         """Get leaderboard sorted by score"""

@@ -94,11 +94,13 @@ class GroqService:
     """
 
     @staticmethod
-    def _client(json_mode: bool = False) -> ChatGroq:
+    def _client(json_mode: bool = False, max_tokens: int = 2048, max_retries: int = 2,
+                no_reasoning: bool = False) -> ChatGroq:
         kwargs: Dict[str, Any] = {
             "model": settings.GROQ_MODEL,
             "api_key": settings.GROQ_API_KEY,
-            "temperature": 0.4
+            "temperature": 0.4,
+            "max_retries": max_retries,
         }
         if json_mode:
             kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
@@ -107,7 +109,7 @@ class GroqService:
             # validator then rejects outright ("max completion tokens reached before
             # generating a valid document") - the caller's fallback silently ate every
             # field this was supposed to fill in.
-            kwargs["max_tokens"] = 2048
+            kwargs["max_tokens"] = max_tokens
             # The configured model is a reasoning model (emits a <think>...</think>
             # block before its actual answer). For anything beyond a trivial prompt,
             # that reasoning alone regularly exceeds the whole max_tokens budget,
@@ -120,7 +122,39 @@ class GroqService:
             # layer so a stray reasoning block never leaks into the JSON output.
             kwargs["reasoning_format"] = "hidden"
             kwargs["reasoning_effort"] = "none"
+        elif no_reasoning:
+            # Short plain-text calls (e.g. chat titles) don't need the thinking phase.
+            kwargs["max_tokens"] = max_tokens
+            kwargs["reasoning_format"] = "hidden"
+            kwargs["reasoning_effort"] = "none"
         return ChatGroq(**kwargs)
+
+    @staticmethod
+    def fallback_title(first_message: str) -> str:
+        """Truncated first user message - used when the LLM title is unavailable."""
+        text = " ".join(first_message.split())
+        return (text[:40].rstrip() + "…") if len(text) > 40 else (text or "New chat")
+
+    @staticmethod
+    async def generate_chat_title(first_message: str) -> str:
+        """Short GPT-style conversation title; never raises, falls back to truncation."""
+        fallback = GroqService.fallback_title(first_message)
+        if not settings.GROQ_API_KEY:
+            return fallback
+        try:
+            client = GroqService._client(max_tokens=24, max_retries=0, no_reasoning=True)
+            prompt = (
+                "Write a concise 2-6 word title for a conversation that starts with the "
+                "message below. Reply with the title only - no quotes, no trailing "
+                "punctuation.\n\n"
+                f"Message: {first_message[:500]}"
+            )
+            result = await asyncio.wait_for(client.ainvoke(prompt), timeout=8)
+            title = " ".join(str(result.content).strip().strip("\"'").rstrip(".").split())
+            return title[:60] if title else fallback
+        except Exception:
+            logger.warning("Chat title generation failed, using fallback", exc_info=True)
+            return fallback
 
     @staticmethod
     def _build_agent_executor(user_id: str, system_prompt: str) -> AgentExecutor:
@@ -190,7 +224,8 @@ class GroqService:
                            "shortly.")
             return ChatResponse(
                 response=message,
-                suggestions=["Check backend configuration", "Try again in a moment"]
+                suggestions=["Check backend configuration", "Try again in a moment"],
+                error=True,
             )
 
     @staticmethod
@@ -245,6 +280,72 @@ class GroqService:
             }
 
     @staticmethod
+    async def curate_plant_profile(
+        plant_name: str,
+        perenual: Optional[Dict[str, Any]],
+        search_results: List[Dict[str, Any]],
+        wikipedia: Optional[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        """
+        The Explore page's extended profile (overview, growing conditions, upkeep,
+        pests, uses, look-alikes), written from Wikipedia + a growing-conditions web
+        search + Perenual. Separate from curate_plant_lookup so a failure here costs the
+        extra sections only, never the core care card. Unknown values are null - the UI
+        hides them rather than showing guesses. Returns None on any failure.
+        """
+        evidence = []
+        if wikipedia and wikipedia.get("extract"):
+            evidence.append(f"[Wikipedia] {wikipedia['extract'][:900]}")
+        for i, r in enumerate(search_results[:6]):
+            evidence.append(f"[Web {i+1}] {r.get('title','')}\n{(r.get('content') or '')[:450]}")
+        if not evidence and not perenual:
+            return None
+
+        prompt = f"""
+        Plant searched: "{plant_name}"
+        Perenual data: {json.dumps(perenual) if perenual else "null"}
+
+        Evidence:
+        {chr(10).join(evidence) or "None"}
+
+        Write an extended reference profile for this plant. Use the evidence first; for a
+        field the evidence does not cover you may use well-established horticultural
+        knowledge of this exact species. If you are not confident, use null - never guess.
+        Keep every string short and concrete (numbers, ranges, units).
+
+        Respond with JSON only, in exactly this shape:
+        {{
+            "overview": "2-3 sentence description of the plant: appearance, origin, what it is known for",
+            "growing": {{
+                "temperature": "string e.g. '18-27 C (65-80 F); avoid below 10 C' or null",
+                "humidity": "string or null",
+                "soil": "string or null",
+                "mature_size": "string e.g. 'Up to 2 m tall indoors' or null",
+                "growth_rate": "slow|moderate|fast or null",
+                "hardiness_zones": "string e.g. 'USDA 10-12' or null",
+                "bloom": "string or null"
+            }},
+            "upkeep": {{
+                "pruning": "string or null",
+                "repotting": "string or null",
+                "seasonal_care": {{"spring_summer": "string or null", "autumn_winter": "string or null"}}
+            }},
+            "pests_diseases": [{{"name": "string", "signs": "string", "treatment": "string"}}],
+            "uses": ["up to 4 short strings, e.g. 'Air-purifying houseplant', 'Hanging basket'"],
+            "similar_plants": ["up to 4 plant common names"]
+        }}
+        "pests_diseases" has up to 3 items.
+        """
+        try:
+            client = GroqService._client(json_mode=True, max_tokens=2500, max_retries=1)
+            response = await client.ainvoke([HumanMessage(content=prompt)])
+            profile = json.loads(response.content)
+            return profile if isinstance(profile, dict) else None
+        except Exception as e:
+            print(f"Groq Plant Profile Error: {e}")
+            return None
+
+    @staticmethod
     async def curate_plant_lookup(
         plant_name: str,
         perenual: Optional[Dict[str, Any]],
@@ -279,30 +380,42 @@ class GroqService:
         Live web search results:
         {search_snippets}
 
-        Using ONLY the information above, write a curated care profile for this plant. If the
-        Perenual data above appears to describe a DIFFERENT plant than what the search results and
-        the user's query are actually about, ignore the Perenual data entirely and rely on the
-        search results instead - do not present facts about the wrong species. If a field isn't
-        covered by either source, say "See sources below" (for care fields) or leave the array
-        empty rather than inventing a plausible-sounding answer.
+        Write an ACTIONABLE care profile for this plant. The reader wants to know exactly what
+        to do, so be concrete: numbers of days, amounts, positions - never vague phrases like
+        "water regularly" or "bright light".
+
+        Source rules:
+        - Prefer the Perenual data and search results above. If the Perenual data describes a
+          DIFFERENT plant than the query and search results are about, ignore Perenual entirely.
+        - Never answer "See sources below" or "unknown" for watering, sunlight, or fertilizing.
+          If the sources are silent on one of those, use well-established horticultural
+          knowledge for this exact species and add that field's name (e.g. "fertilizing") to
+          "ai_filled_fields" so the reader knows it was not sourced.
+        - Leave toxicity.pets as "unknown" unless the sources state it (it is verified separately).
+        - "interval_days" fields are integers (days between waterings / feedings). Use Perenual's
+          watering_frequency_days when it describes this plant.
 
         Respond with JSON only, matching this exact shape:
         {{
             "common_name": "string",
             "scientific_name": "string",
             "care_level": "easy|moderate|difficult",
-            "watering": {{"frequency": "string, e.g. 'Every 7 days'", "amount": "string", "tips": "string"}},
-            "sunlight": {{"requirement": "string, e.g. 'Bright, indirect'", "details": "string"}},
-            "fertilizing": {{"frequency": "string", "type": "string"}},
+            "watering": {{"frequency": "string, e.g. 'Every 7 days'", "interval_days": 7, "amount": "string, e.g. 'Until water drains out, about 1 cup per 6-inch pot'", "tips": "string"}},
+            "sunlight": {{"requirement": "string, e.g. 'Bright, indirect'", "details": "string with placement, e.g. 'Within 1 m of an east or north window'"}},
+            "fertilizing": {{"frequency": "string", "interval_days": 30, "type": "string, e.g. 'Balanced 10-10-10 liquid at half strength'"}},
             "toxicity": {{"pets": "toxic|safe|unknown", "humans": "toxic|safe|unknown", "details": "string"}},
             "environment": {{"native_habitat": "string", "grows_indoors": true}},
-            "common_issues": ["up to 4 short strings"],
-            "propagation": ["up to 4 short strings, e.g. 'stem cutting'"],
-            "interesting_facts": ["up to 3 short strings"]
+            "quick_start": ["3 or 4 short imperative steps for the first week, e.g. 'Pot in a well-draining mix with a drainage hole'"],
+            "warning_signs": [{{"symptom": "string", "cause": "short string", "fix": "short string"}}],
+            "common_issues": ["up to 3 short strings"],
+            "propagation": ["up to 3 short strings, e.g. 'stem cutting in water, 4-6 weeks'"],
+            "interesting_facts": ["up to 2 short strings"],
+            "ai_filled_fields": ["names of fields not supported by the sources above"]
         }}
+        "warning_signs" has up to 2 items, each a symptom the owner can see, its likely cause, and the fix.
         """
         try:
-            client = GroqService._client(json_mode=True)
+            client = GroqService._client(json_mode=True, max_tokens=3500, max_retries=1)
             response = await client.ainvoke([HumanMessage(content=prompt)])
             curated = json.loads(response.content)
             # Sources are the caller's own Tavily URLs, not anything the model wrote -

@@ -418,7 +418,7 @@ backend via `FLOURISH_API_BASE_URL` (defaults to `http://localhost:8000`).
 |---|---|---|
 | `ALLOWED_ORIGINS` | localhost dev origins | CORS |
 | `GROQ_API_KEY` | "" | **Required.** GroqService: chat, lookup, recommendations |
-| `GROQ_MODEL` | `qwen/qwen3-32b` | GroqService, the model used for both the tool-calling agent and structured extraction (LLM backbone) |
+| `GROQ_MODEL` | `qwen/qwen3.8-27b` | GroqService, the model used for both the tool-calling agent and structured extraction (LLM backbone) |
 | `TAVILY_API_KEY` | "" | **Required for grounded recommendations.** GroqService web-search tool |
 | `UNSPLASH_APPLICATION_ID` | "" | PlantService, captured but not sent on any request (see §5) |
 | `UNSPLASH_ACCESS_KEY` | "" | PlantService, sent as `client_id`; falls back to the rate-limited public `demo` ID when blank |

@@ -26,6 +26,10 @@ def test_health_check():
     data = response.json()
     assert data["status"] == "ok"
     assert data["service"] == "Flourish API"
+    # Readiness is reported as a bool + model name; the key itself must never leak.
+    assert isinstance(data["ai"]["configured"], bool)
+    assert data["ai"]["model"]
+    assert "key" not in str(data).lower() or "gsk_" not in str(data)
 
 
 def test_root_endpoint():

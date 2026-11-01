@@ -62,7 +62,7 @@ def test_groq_defaults():
     Explicitly overrides GROQ_API_KEY so this doesn't depend on whether the local
     .env happens to have a real key configured."""
     settings = Settings(GROQ_API_KEY="")
-    assert settings.GROQ_MODEL == "qwen/qwen3-32b"
+    assert settings.GROQ_MODEL == "qwen/qwen3.8-27b"
     assert settings.GROQ_API_KEY == ""
 
 
@@ -107,3 +107,16 @@ def test_firebase_fields_fallback():
     assert settings.FIREBASE_TOKEN_URI == "https://oauth2.googleapis.com/token"
 
 
+
+
+def test_groq_api_key_whitespace_and_quotes_stripped():
+    """A key pasted into a hosting dashboard often carries a trailing newline/space or
+    wrapping quotes; those must not reach Groq as part of the Authorization header."""
+    assert Settings(GROQ_API_KEY="  gsk_abc123\n").GROQ_API_KEY == "gsk_abc123"
+    assert Settings(GROQ_API_KEY='"gsk_abc123"').GROQ_API_KEY == "gsk_abc123"
+    assert Settings(GROQ_MODEL=" qwen/qwen3.8-27b ").GROQ_MODEL == "qwen/qwen3.8-27b"
+
+
+def test_ai_configured_reflects_key_presence():
+    assert Settings(GROQ_API_KEY="").ai_configured is False
+    assert Settings(GROQ_API_KEY="gsk_abc123").ai_configured is True

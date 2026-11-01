@@ -30,9 +30,21 @@ class Settings(BaseSettings):
             return [origin.strip() for origin in v.split(',') if origin.strip()]
         return v
     
+    # Hosting dashboards (Render/Vercel) make it easy to paste a secret with a trailing
+    # space or newline, which providers then reject as an invalid key. Normalise the
+    # API-key style settings so a sloppy paste still works.
+    @field_validator(
+        'GROQ_API_KEY', 'TAVILY_API_KEY', 'PERENUAL_API_KEY', 'OPENWEATHER_API_KEY',
+        'UNSPLASH_ACCESS_KEY', 'CRON_SECRET', 'GROQ_MODEL',
+        mode='before',
+    )
+    @classmethod
+    def strip_whitespace(cls, v):
+        return v.strip().strip('"').strip("'").strip() if isinstance(v, str) else v
+
     # AI Settings
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "qwen/qwen3-32b")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
 
     # Image Settings - an Unsplash app has three credentials; only the Access Key is
@@ -84,5 +96,11 @@ class Settings(BaseSettings):
     # so an external scheduler (GitHub Actions cron) calls these instead, authenticated
     # with this bearer token rather than a user's Firebase ID token.
     CRON_SECRET: str = os.getenv("CRON_SECRET", "")
+
+    @property
+    def ai_configured(self) -> bool:
+        """True when a Groq key is present - the only hard requirement for the AI features."""
+        return bool(self.GROQ_API_KEY)
+
 
 settings = Settings()

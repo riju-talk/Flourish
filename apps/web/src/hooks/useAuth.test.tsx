@@ -9,6 +9,13 @@ vi.mock('@/lib/firebase', () => ({
   googleProvider: {},
 }));
 
+// useAuth loads the profile after sign-in; stub it so the test never makes a real
+// network request (jsdom's XHR rejects with UND_ERR_INVALID_ARG).
+vi.mock('@/integrations/api', () => ({
+  getProfile: vi.fn(() => Promise.resolve({ id: 'test-uid', email: 'test@test.com' })),
+  createProfile: vi.fn(),
+}));
+
 let authStateCallback: ((user: any) => void) | null = null;
 
 vi.mock('firebase/auth', () => ({

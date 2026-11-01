@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "flourish-plants": {
+      "command": "uv",
+      "args": ["run", "--no-sync", "python", "plant_mcp_server.py"],
+      "cwd": "apps/api"
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"],
+      "cwd": "apps/web"
+    }
+  }
+}
