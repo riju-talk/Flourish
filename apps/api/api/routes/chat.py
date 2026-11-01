@@ -11,6 +11,7 @@ from ..services.groq_service import GroqService
 from ..services.weather_service import WeatherService
 from ..services.plant_service import PlantService
 from ..core.auth import verify_firebase_token
+from ..core.rate_limit import chat_limit, vision_limit
 
 router = APIRouter()
 
@@ -18,7 +19,7 @@ router = APIRouter()
 async def chat_with_ai(
     messages: List[ChatMessage],
     context: Optional[str] = None,
-    user_id: str = Depends(verify_firebase_token)
+    user_id: str = Depends(chat_limit)
 ):
     """
     Agentic multi-modal chat via Groq (PlantMind)
@@ -105,7 +106,7 @@ async def delete_session(session_id: str, user_id: str = Depends(verify_firebase
 
 @router.post("/sessions/{session_id}/messages", response_model=SendMessageResponse)
 async def send_session_message(
-    session_id: str, body: SendMessageRequest, user_id: str = Depends(verify_firebase_token)
+    session_id: str, body: SendMessageRequest, user_id: str = Depends(chat_limit)
 ):
     session = await _owned_session(session_id, user_id)
     content = body.content.strip()
@@ -151,7 +152,7 @@ async def send_session_message(
 @router.post("/analyze-image", response_model=ImageAnalysis)
 async def analyze_plant_image(
     image_data: Dict[str, Any],
-    user_id: str = Depends(verify_firebase_token)
+    user_id: str = Depends(vision_limit)
 ):
     """Enhanced plant image analysis with external APIs"""
     try:
@@ -183,7 +184,7 @@ async def generate_care_plan(
     plant_data: Dict[str, Any],
     lat: Optional[float] = None,
     lon: Optional[float] = None,
-    user_id: str = Depends(verify_firebase_token)
+    user_id: str = Depends(vision_limit)
 ):
     """Generate structured care plan for a plant"""
     try:

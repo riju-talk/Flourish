@@ -12,6 +12,7 @@ from ..services.tavily_service import TavilyService
 from ..services.plant_lookup_service import curate_plant_info
 from ..services.plant_knowledge_service import lookup_plant
 from ..core.auth import verify_firebase_token
+from ..core.rate_limit import lookup_limit, plant_create_limit
 from ..db.firestore import FirestoreDB
 from ..services.notification_service import NotificationService
 from ..routes.leaderboard import update_user_score
@@ -28,7 +29,7 @@ class AutonomousPlantRequest(BaseModel):
 @router.post("/lookup")
 async def agentic_plant_lookup(
     payload: PlantLookupRequest,
-    user_id: str = Depends(verify_firebase_token)
+    user_id: str = Depends(lookup_limit)
 ):
     """
     Explore/Plant Lookup: internet-first, not internet-only. Perenual (deterministic
@@ -63,7 +64,7 @@ async def agentic_plant_lookup(
 @router.post("/autonomous")
 async def create_autonomous_plant(
     payload: AutonomousPlantRequest,
-    user_id: str = Depends(verify_firebase_token)
+    user_id: str = Depends(plant_create_limit)
 ):
     """
     Create a plant with AI-generated care info, grounded in Perenual's real plant-care

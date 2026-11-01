@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
+import { rateLimitMessage } from "@/lib/apiError";
 import {
   createChatSession, deleteChatSession, getChatSession, listChatSessions,
   renameChatSession, sendSessionMessage,
@@ -90,10 +91,15 @@ const Chat = () => {
       setLocal([]);
       if (created) navigate(`/chat/${sid}`, { replace: true });
     },
-    onError: (_e, { text }) => {
+    onError: (e, { text }) => {
       setInput(text);
       setLocal((prev) => prev.filter((m) => m.role !== "user" || m.id.startsWith("err")));
-      toast({ title: "Message failed to send", description: "Check your connection and try again.", variant: "destructive" });
+      const limited = rateLimitMessage(e);
+      toast({
+        title: limited ? "Slow down a little" : "Message failed to send",
+        description: limited ?? "Check your connection and try again.",
+        variant: "destructive",
+      });
     },
     onSettled: () => { sending.current = false; },
   });

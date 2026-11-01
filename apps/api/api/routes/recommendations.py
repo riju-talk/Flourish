@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from ..core.auth import verify_firebase_token
+from ..core.rate_limit import recommendations_limit
 from ..db.firestore import FirestoreDB
 from ..services.groq_service import GroqService
 from ..services.plant_service import PlantService
@@ -19,7 +20,7 @@ async def get_recommendations(user_id: str = Depends(verify_firebase_token)):
 @router.post("/generate")
 async def generate_recommendations(
     count: int = 3,
-    user_id: str = Depends(verify_firebase_token)
+    user_id: str = Depends(recommendations_limit)
 ):
     """Trigger a fresh personalized recommendation pass (Groq agent + Tavily + weather)"""
     try:

@@ -33,6 +33,27 @@ stored in the frontend, so rotating it needs no web redeploy.
 If the key is missing or Groq is unreachable the API still starts and every AI endpoint
 returns a graceful fallback message instead of a 500.
 
+## Rate limiting (AI endpoints)
+
+Per-user limits protect your Groq quota from a single heavy user or a client bug. Over the
+limit the API returns **HTTP 429** with a `Retry-After` header and a friendly message; the
+web app shows it as a toast. Rejected requests are not counted, so waiting out the
+`Retry-After` is always enough.
+
+| Feature | Endpoint(s) | Per minute | Per hour |
+| --- | --- | --- | --- |
+| PlantMind chat | `POST /api/chat/`, `POST /api/chat/sessions/{id}/messages` | 10 | 120 |
+| Explore lookup | `POST /api/plants/lookup`, `GET /api/context/plant-info/{name}` | 8 | 60 |
+| Recommendations | `POST /api/recommendations/generate` | 3 | 15 |
+| AI add-plant | `POST /api/plants/autonomous` | 6 | 40 |
+| Image analysis / care plan | `POST /api/chat/analyze-image`, `POST /api/chat/care-plan` | 5 | 30 |
+
+Tune them in `apps/api/api/core/rate_limit.py` (`LIMITS`). Set `RATE_LIMIT_ENABLED=false` to
+disable (local load tests only). Counters live in process memory: exact on a single
+long-lived server (Render), best-effort on Vercel serverless where each warm instance
+counts separately. If you need hard global limits on Vercel, move the counters to Firestore
+or Redis.
+
 ## Other required environment variables
 
 See `apps/api/.env.example` for the full list. Required for a working deployment:

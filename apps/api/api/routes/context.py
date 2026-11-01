@@ -9,6 +9,7 @@ from typing import Optional
 from ..services.weather_service import WeatherService
 from ..services.groq_service import GroqService
 from ..core.auth import verify_firebase_token
+from ..core.rate_limit import lookup_limit
 
 router = APIRouter()
 
@@ -26,7 +27,7 @@ async def get_weather_context(lat: float, lon: float, user_id: str = Depends(ver
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/plant-info/{name}")
-async def get_plant_info_context(name: str, user_id: str = Depends(verify_firebase_token)):
+async def get_plant_info_context(name: str, user_id: str = Depends(lookup_limit)):
     """Fetch botanical/care data for a plant species."""
     try:
         plant_data = await GroqService.get_plant_info_agentic(name)

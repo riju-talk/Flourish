@@ -6,6 +6,7 @@ import { RecommendationCard } from "@/components/RecommendationCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { rateLimitMessage } from "@/lib/apiError";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getRecommendations,
@@ -47,9 +48,9 @@ export default function RecommendationsPage() {
         toast({ title: "Fresh picks ready!" });
       }
     },
-    onError: (_err, variables) => {
+    onError: (err, variables) => {
       if (!variables?.silent) {
-        toast({ title: "Couldn't generate recommendations", variant: "destructive" });
+        toast({ title: "Couldn't generate recommendations", description: rateLimitMessage(err) ?? undefined, variant: "destructive" });
       }
     },
   });

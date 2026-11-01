@@ -88,6 +88,10 @@ class Settings(BaseSettings):
     # instead. See db/firestore.py's get_db().
     FIRESTORE_DATABASE_ID: str = os.getenv("FIRESTORE_DATABASE_ID", "(default)")
 
+    # Per-user rate limiting on the AI-heavy endpoints (see core/rate_limit.py). On by
+    # default; set RATE_LIMIT_ENABLED=false only for local load testing.
+    RATE_LIMIT_ENABLED: bool = os.getenv("RATE_LIMIT_ENABLED", "true").strip().lower() not in ("0", "false", "no", "off")
+
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "change-this-secret-key-in-production")
 
