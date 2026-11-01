@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://flourish-web-iota.vercel.app/sitemap.xml
