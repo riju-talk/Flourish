@@ -330,3 +330,59 @@ export async function deleteStorageFile(filePath: string) {
   const { data } = await api.delete(`/storage/delete/${encodeURIComponent(filePath)}`);
   return data;
 }
+// ---- AI CHAT SESSIONS (persistent, ChatGPT-style) ----
+export interface ChatSessionSummary {
+  id: string;
+  title: string;
+  created_at: string | null;
+  updated_at: string | null;
+  message_count: number;
+}
+
+export interface SessionMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  suggestions: string[];
+  created_at: string | null;
+}
+
+export interface ChatSessionDetail extends ChatSessionSummary {
+  messages: SessionMessage[];
+}
+
+export interface SendMessageResult {
+  session: ChatSessionSummary;
+  user_message: SessionMessage | null;
+  assistant_message: SessionMessage;
+  error: boolean;
+}
+
+export async function listChatSessions(): Promise<ChatSessionSummary[]> {
+  const { data } = await api.get('/chat/sessions');
+  return data;
+}
+
+export async function createChatSession(title?: string): Promise<ChatSessionSummary> {
+  const { data } = await api.post('/chat/sessions', title ? { title } : {});
+  return data;
+}
+
+export async function getChatSession(id: string): Promise<ChatSessionDetail> {
+  const { data } = await api.get(`/chat/sessions/${id}`);
+  return data;
+}
+
+export async function renameChatSession(id: string, title: string): Promise<ChatSessionSummary> {
+  const { data } = await api.patch(`/chat/sessions/${id}`, { title });
+  return data;
+}
+
+export async function deleteChatSession(id: string): Promise<void> {
+  await api.delete(`/chat/sessions/${id}`);
+}
+
+export async function sendSessionMessage(id: string, content: string): Promise<SendMessageResult> {
+  const { data } = await api.post(`/chat/sessions/${id}/messages`, { content });
+  return data;
+}

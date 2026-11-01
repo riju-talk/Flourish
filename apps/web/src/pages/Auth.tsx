@@ -111,10 +111,6 @@ const Auth = () => {
               </div>
             )}
           </Button>
-
-          <p className="text-xs text-muted-foreground text-center mt-6">
-            By continuing you agree to Flourish's Terms of Service and Privacy Policy.
-          </p>
         </div>
       </div>
     </div>

@@ -1,4 +1,7 @@
 import { Link } from "react-router-dom";
+import { Github } from "lucide-react";
+
+const GITHUB_URL = "https://github.com/riju-talk/Flourish";
 
 export const Footer = () => {
   const year = new Date().getFullYear();
@@ -12,24 +15,24 @@ export const Footer = () => {
             <span className="font-serif text-lg font-semibold">Flourish</span>
           </div>
           <span className="text-sm text-flourish-cream/50">
-            © {year} Flourish Botanical. All rights reserved.
+            © {year} Flourish. All rights reserved.
           </span>
         </div>
 
-        <div className="flex items-center gap-6 text-sm text-flourish-cream/70">
+        <nav aria-label="Footer" className="flex items-center gap-6 text-sm text-flourish-cream/70">
           <Link to="/about" className="hover:text-flourish-cream transition-colors duration-500 ease-out">
             About
           </Link>
-          <a href="#" className="hover:text-flourish-cream transition-colors duration-500 ease-out">
-            Privacy Policy
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 hover:text-flourish-cream transition-colors duration-500 ease-out"
+          >
+            <Github className="h-4 w-4" />
+            GitHub
           </a>
-          <a href="#" className="hover:text-flourish-cream transition-colors duration-500 ease-out">
-            Terms of Service
-          </a>
-          <a href="#" className="hover:text-flourish-cream transition-colors duration-500 ease-out">
-            Sustainability Report
-          </a>
-        </div>
+        </nav>
       </div>
     </footer>
   );

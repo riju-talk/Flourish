@@ -96,7 +96,7 @@ const App = () => (
                     }
                   />
                   <Route
-                    path="/chat"
+                    path="/chat/:sessionId?"
                     element={
                       <ProtectedRoute>
                         <Chat />
