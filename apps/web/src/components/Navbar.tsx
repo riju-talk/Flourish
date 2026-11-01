@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { User, LogOut, Settings, HelpCircle, ChevronDown } from "lucide-react";
+import { User, LogOut, Settings, HelpCircle, ChevronDown, Menu } from "lucide-react";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import {
   DropdownMenu,
@@ -15,6 +17,7 @@ export const Navbar = () => {
     const { user, profile, signOut } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
+    const [menuOpen, setMenuOpen] = useState(false);
 
     const navItems = [
         { label: "Dashboard", path: "/" },
@@ -33,21 +36,30 @@ export const Navbar = () => {
     return (
         <nav className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur-sm border-b border-border">
             <div className="container mx-auto px-4">
-                <div className="flex items-center justify-between h-16">
-                    <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+                <div className="flex items-center justify-between h-16 gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setMenuOpen(true)}
+                        aria-label="Open menu"
+                        className="md:hidden -ml-2 p-2 rounded-lg text-foreground hover:bg-secondary/60 transition-colors"
+                    >
+                        <Menu size={22} />
+                    </button>
+
+                    <Link to="/" className="flex items-center gap-2.5 group shrink-0 max-md:mr-auto">
                         <img
                             src="/logo.png"
                             alt="Flourish"
                             className="w-9 h-9 rounded-full object-cover shadow-sm transition-transform duration-500 ease-out group-hover:scale-105"
                         />
-                        <span className="text-2xl font-serif font-semibold text-primary tracking-tight">
+                        <span className="text-xl sm:text-2xl font-serif font-semibold text-primary tracking-tight">
                             Flourish
                         </span>
                     </Link>
 
                     <div className="hidden md:flex items-center gap-8">
                         {navItems.map((item) => {
-                            const isActive = location.pathname === item.path;
+                            const isActive = location.pathname === item.path || (item.path === "/chat" && location.pathname.startsWith("/chat/"));
                             return (
                                 <Link
                                     key={item.path}
@@ -103,6 +115,42 @@ export const Navbar = () => {
                     </div>
                 </div>
             </div>
+
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+                <SheetContent side="left" className="w-72 p-0 flex flex-col">
+                    <SheetTitle className="sr-only">Navigation menu</SheetTitle>
+                    <div className="flex items-center gap-2.5 px-5 h-16 border-b border-border">
+                        <img src="/logo.png" alt="" className="w-8 h-8 rounded-full object-cover" />
+                        <span className="text-xl font-serif font-semibold text-primary">Flourish</span>
+                    </div>
+                    <nav aria-label="Mobile" className="flex-1 overflow-y-auto p-3">
+                        {navItems.map((item) => {
+                            const isActive = location.pathname === item.path || (item.path === "/chat" && location.pathname.startsWith("/chat/"));
+                            return (
+                                <Link
+                                    key={item.path}
+                                    to={item.path}
+                                    onClick={() => setMenuOpen(false)}
+                                    aria-current={isActive ? "page" : undefined}
+                                    className={`flex items-center rounded-lg px-4 py-3 text-base font-medium transition-colors ${
+                                        isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                                    }`}
+                                >
+                                    {item.label}
+                                </Link>
+                            );
+                        })}
+                    </nav>
+                    <div className="border-t border-border p-3">
+                        <button
+                            onClick={() => { setMenuOpen(false); handleSignOut(); }}
+                            className="flex w-full items-center gap-2 rounded-lg px-4 py-3 text-base font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                            <LogOut size={18} /> Sign Out
+                        </button>
+                    </div>
+                </SheetContent>
+            </Sheet>
         </nav>
     );
 };

@@ -152,7 +152,7 @@ const Chat = () => {
   const showWelcome = !sessionId && messages.length === 0;
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-[100dvh] flex-col bg-background">
       <Seo title="PlantMind Chat" description="Chat with PlantMind, your AI plant care assistant, for personalized care advice." />
       <Navbar />
 

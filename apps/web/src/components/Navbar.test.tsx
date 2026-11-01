@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { Navbar } from './Navbar';
@@ -80,5 +80,21 @@ describe('Navbar', () => {
       </MemoryRouter>
     );
     expect(screen.getByTestId('notification-center')).toBeInTheDocument();
+  });
+
+  it('offers a phone menu with every destination, closing when one is chosen', async () => {
+    render(
+      <MemoryRouter initialEntries={['/calendar']}>
+        <Navbar />
+      </MemoryRouter>
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Open menu' }));
+    const mobile = await screen.findByRole('navigation', { name: 'Mobile' });
+    for (const label of ['Dashboard', 'AI Assistant', 'Calendar', 'Explore', 'For You', 'Leaderboard']) {
+      expect(within(mobile).getByRole('link', { name: label })).toBeInTheDocument();
+    }
+    expect(within(mobile).getByRole('link', { name: 'Calendar' })).toHaveAttribute('aria-current', 'page');
+    await userEvent.click(within(mobile).getByRole('link', { name: 'Explore' }));
+    await waitFor(() => expect(screen.queryByRole('navigation', { name: 'Mobile' })).not.toBeInTheDocument());
   });
 });
